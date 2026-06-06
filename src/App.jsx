@@ -422,10 +422,10 @@ export default function App() {
               {filterMonth ? `Filtrando: ${MONTHS_ES[parseInt(filterMonth.split("-")[1])-1]} ${filterMonth.split("-")[0]}` : "Todo El Histórico"}
             </div>
             <input type="month" value={filterMonth} onChange={e => setFilterMonth(e.target.value)}
-              style={{ border: "1.5px solid #e8e8e8", borderRadius: 22, padding: "6px 12px", fontSize: 12,
+              style={{ border: "1.5px solid #e8e8e8", borderRadius: 11, padding: "6px 12px", fontSize: 12,
                 background: "#fff", outline: "none", fontFamily: "inherit", cursor: "pointer" }} />
             {filterMonth && <button onClick={() => setFilterMonth("")}
-              style={{ background: "#f0f0f0", border: "none", borderRadius: 22, padding: "6px 10px", fontSize: 12, cursor: "pointer" }}>✕</button>}
+              style={{ background: "#f0f0f0", border: "none", borderRadius: 11, padding: "6px 10px", fontSize: 12, cursor: "pointer" }}>✕</button>}
           </div>
 
           {gastosList.length === 0 && (
@@ -456,10 +456,10 @@ export default function App() {
               {filterMonth ? `Filtrando: ${MONTHS_ES[parseInt(filterMonth.split("-")[1])-1]} ${filterMonth.split("-")[0]}` : "Todo El Histórico"}
             </div>
             <input type="month" value={filterMonth} onChange={e => setFilterMonth(e.target.value)}
-              style={{ border: "1.5px solid #e8e8e8", borderRadius: 22, padding: "6px 12px", fontSize: 12,
+              style={{ border: "1.5px solid #e8e8e8", borderRadius: 11, padding: "6px 12px", fontSize: 12,
                 background: "#fff", outline: "none", fontFamily: "inherit", cursor: "pointer" }} />
             {filterMonth && <button onClick={() => setFilterMonth("")}
-              style={{ background: "#f0f0f0", border: "none", borderRadius: 22, padding: "6px 10px", fontSize: 12, cursor: "pointer" }}>✕</button>}
+              style={{ background: "#f0f0f0", border: "none", borderRadius: 11, padding: "6px 10px", fontSize: 12, cursor: "pointer" }}>✕</button>}
           </div>
 
           {ventasList.length === 0 && (
