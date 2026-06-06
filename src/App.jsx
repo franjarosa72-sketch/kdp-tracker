@@ -52,7 +52,7 @@ function calcStats(movements, pid, prefix) {
 
 // ── COMPONENTS ──────────────────────────────────────────────────────────────
 
-function MovementRow({ m, onDelete, showProduct, products }) {
+function MovementRow({ m, onDelete, onEdit, showProduct, products }) {
   const prod = products.find(p => p.id === m.productId);
   return (
     <div style={{ background: "#fff", borderRadius: 14, padding: "13px 16px", marginBottom: 8,
@@ -74,8 +74,10 @@ function MovementRow({ m, onDelete, showProduct, products }) {
         color: m.type === "venta" ? "#1a7a4a" : "#c0392b" }}>
         {m.type === "venta" ? "+" : "-"}{fmtAbs(m.amount)}
       </span>
+      <button onClick={() => onEdit && onEdit(m)}
+        style={{ background: "none", border: "none", color: "#bbb", fontSize: 15, cursor: "pointer", padding: "0 2px", flexShrink: 0 }}>✏️</button>
       <button onClick={() => onDelete(m.id)}
-        style={{ background: "none", border: "none", color: "#ddd", fontSize: 18, cursor: "pointer", padding: "0 2px", flexShrink: 0 }}>🗑</button>
+        style={{ background: "none", border: "none", color: "#ddd", fontSize: 15, cursor: "pointer", padding: "0 2px", flexShrink: 0 }}>🗑</button>
     </div>
   );
 }
@@ -117,6 +119,7 @@ export default function App() {
   const [activePid, setActivePid] = useState(1);
   const [modal,     setModal]     = useState(null);
   const [form,      setForm]      = useState({});
+  const [editingId, setEditingId] = useState(null);
   const [filterType, setFilterType] = useState("all"); // gastos/ventas filter
   const [informeYear, setInformeYear] = useState(new Date().getFullYear());
 
@@ -128,6 +131,33 @@ export default function App() {
 
   // ── ACTIONS
   function deleteMovement(id) { setMovements(prev => prev.filter(m => m.id !== id)); }
+
+  function openEdit(m) {
+    setEditingId(m.id);
+    setForm({
+      concept: m.concept,
+      amount: String(m.amount),
+      date: m.date,
+      devengoMonth: m.devengoMonth || "",
+      notes: m.notes || "",
+      units: String(m.units || 1),
+    });
+    setModal(m.type === "venta" ? "edit-venta" : "edit-gasto");
+  }
+
+  function updateMovement() {
+    const amt = parseFloat((form.amount || "0").replace(",", "."));
+    if (!amt) return;
+    setMovements(prev => prev.map(m => m.id === editingId ? {
+      ...m,
+      concept: form.concept || m.concept,
+      amount: amt,
+      date: form.date || m.date,
+      devengoMonth: form.devengoMonth || null,
+      notes: form.notes || null,
+    } : m));
+    setModal(null); setForm({}); setEditingId(null);
+  }
 
   function saveMovement(type) {
     const amt = parseFloat((form.amount || "0").replace(",", "."));
@@ -309,7 +339,7 @@ export default function App() {
           {/* Últimos movimientos */}
           <h2 style={{ fontSize: 17, fontWeight: 700, margin: "0 0 10px" }}>Últimos movimientos</h2>
           {[...movements].sort((a,b) => b.date.localeCompare(a.date)).slice(0,8).map(m => (
-            <MovementRow key={m.id} m={m} onDelete={deleteMovement} showProduct products={products} />
+            <MovementRow key={m.id} m={m} onDelete={deleteMovement} onEdit={openEdit} showProduct products={products} />
           ))}
         </div>
       </>)}
@@ -386,7 +416,7 @@ export default function App() {
               <p style={{ fontSize: 36 }}>💸</p><p>Sin gastos registrados</p>
             </div>
           )}
-          {gastosList.map(m => <MovementRow key={m.id} m={m} onDelete={deleteMovement} products={products} />)}
+          {gastosList.map(m => <MovementRow key={m.id} m={m} onDelete={deleteMovement} onEdit={openEdit} products={products} />)}
         </div>
       )}
 
@@ -417,7 +447,7 @@ export default function App() {
               <p style={{ fontSize: 36 }}>💰</p><p>Sin ventas registradas</p>
             </div>
           )}
-          {ventasList.map(m => <MovementRow key={m.id} m={m} onDelete={deleteMovement} products={products} />)}
+          {ventasList.map(m => <MovementRow key={m.id} m={m} onDelete={deleteMovement} onEdit={openEdit} products={products} />)}
         </div>
       )}
 
@@ -671,6 +701,64 @@ export default function App() {
             <button onClick={saveProduct}
               style={{ background: "#1a1a1a", color: "#fff", border: "none", borderRadius: 12, padding: "14px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>Crear</button>
           </div>
+        </Modal>
+      )}
+
+      {/* ── MODAL EDITAR VENTA ── */}
+      {modal === "edit-venta" && (
+        <Modal title="Editar venta" onClose={() => { setModal(null); setForm({}); setEditingId(null); }}>
+          <Field label="Concepto">
+            <input value={form.concept || ""} onChange={e => setF("concept", e.target.value)} style={inputStyle} />
+          </Field>
+          <Field label="Importe total (€)">
+            <input type="number" step="0.01" value={form.amount || ""} onChange={e => setF("amount", e.target.value)} style={inputStyle} />
+          </Field>
+          <Field label="Fecha de cobro">
+            <input type="date" value={form.date || ""} onChange={e => setF("date", e.target.value)} style={inputStyle} />
+          </Field>
+          <Field label="Mes al que pertenecen (regalías)">
+            <select value={form.devengoMonth || ""} onChange={e => setF("devengoMonth", e.target.value)} style={inputStyle}>
+              <option value="">— Mismo mes de cobro —</option>
+              {MONTHS_ES.map((m, i) => {
+                const val = `${String(i+1).padStart(2,"0")}/${now.getFullYear()}`;
+                return <option key={i} value={val}>{m} {now.getFullYear()}</option>;
+              })}
+              {MONTHS_ES.map((m, i) => {
+                const y = now.getFullYear() - 1;
+                const val = `${String(i+1).padStart(2,"0")}/${y}`;
+                return <option key={`${i}-prev`} value={val}>{m} {y}</option>;
+              })}
+            </select>
+          </Field>
+          <Field label="Notas (opcional)">
+            <textarea value={form.notes || ""} onChange={e => setF("notes", e.target.value)}
+              style={{ ...inputStyle, height: 72, resize: "none", lineHeight: 1.5 }} />
+          </Field>
+          <button onClick={updateMovement}
+            style={{ width: "100%", background: "#1a7a4a", color: "#fff", border: "none", borderRadius: 14,
+              padding: "16px", fontSize: 15, fontWeight: 700, cursor: "pointer", marginTop: 4 }}>
+            Guardar cambios
+          </button>
+        </Modal>
+      )}
+
+      {/* ── MODAL EDITAR GASTO ── */}
+      {modal === "edit-gasto" && (
+        <Modal title="Editar gasto" onClose={() => { setModal(null); setForm({}); setEditingId(null); }}>
+          <Field label="Concepto">
+            <input value={form.concept || ""} onChange={e => setF("concept", e.target.value)} style={inputStyle} />
+          </Field>
+          <Field label="Importe (€)">
+            <input type="number" step="0.01" value={form.amount || ""} onChange={e => setF("amount", e.target.value)} style={inputStyle} />
+          </Field>
+          <Field label="Fecha">
+            <input type="date" value={form.date || ""} onChange={e => setF("date", e.target.value)} style={inputStyle} />
+          </Field>
+          <button onClick={updateMovement}
+            style={{ width: "100%", background: "#c0392b", color: "#fff", border: "none", borderRadius: 14,
+              padding: "16px", fontSize: 15, fontWeight: 700, cursor: "pointer", marginTop: 4 }}>
+            Guardar cambios
+          </button>
         </Modal>
       )}
     </div>
