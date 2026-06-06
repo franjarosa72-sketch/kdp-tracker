@@ -127,6 +127,7 @@ export default function App() {
   const [form,      setForm]      = useState({});
   const [editingId, setEditingId] = useState(null);
   const [selectedMonth, setSelectedMonth] = useState(null);
+  const [filterMonth, setFilterMonth] = useState("");
   const [filterType, setFilterType] = useState("all"); // gastos/ventas filter
   const [informeYear, setInformeYear] = useState(new Date().getFullYear());
 
@@ -215,8 +216,8 @@ export default function App() {
 
   // ── FILTERED lists for gastos/ventas tabs
   const allMovSorted = [...movements].sort((a,b) => b.date.localeCompare(a.date));
-  const gastosList = allMovSorted.filter(m => m.productId === activePid && m.type === "gasto");
-  const ventasList = allMovSorted.filter(m => m.productId === activePid && m.type === "venta");
+  const gastosList = allMovSorted.filter(m => m.productId === activePid && m.type === "gasto" && (!filterMonth || m.date.startsWith(filterMonth)));
+  const ventasList = allMovSorted.filter(m => m.productId === activePid && m.type === "venta" && (!filterMonth || m.date.startsWith(filterMonth)));
 
   const resultado = monthStats.resultado;
   const isPos = resultado >= 0;
@@ -416,12 +417,15 @@ export default function App() {
           </div>
 
           <div style={{ display: "flex", gap: 8, margin: "16px 0 14px", alignItems: "center" }}>
-            <div style={{ flex: 1, background: "#fff", borderRadius: 22, padding: "9px 14px",
-              fontSize: 13, color: "#888", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>Todo El Histórico</div>
-            <div style={{ background: "#fff", borderRadius: 22, padding: "9px 14px", fontSize: 13,
-              color: "#555", fontWeight: 500, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", display: "flex", gap: 6, alignItems: "center", cursor: "pointer" }}>
-              ⚗️ Filtrar
+            <div style={{ flex: 1, background: "#fff", borderRadius: 22, padding: "6px 14px",
+              fontSize: 13, color: "#888", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+              {filterMonth ? `Filtrando: ${MONTHS_ES[parseInt(filterMonth.split("-")[1])-1]} ${filterMonth.split("-")[0]}` : "Todo El Histórico"}
             </div>
+            <input type="month" value={filterMonth} onChange={e => setFilterMonth(e.target.value)}
+              style={{ border: "1.5px solid #e8e8e8", borderRadius: 22, padding: "6px 12px", fontSize: 12,
+                background: "#fff", outline: "none", fontFamily: "inherit", cursor: "pointer" }} />
+            {filterMonth && <button onClick={() => setFilterMonth("")}
+              style={{ background: "#f0f0f0", border: "none", borderRadius: 22, padding: "6px 10px", fontSize: 12, cursor: "pointer" }}>✕</button>}
           </div>
 
           {gastosList.length === 0 && (
@@ -447,12 +451,15 @@ export default function App() {
           </div>
 
           <div style={{ display: "flex", gap: 8, margin: "16px 0 14px", alignItems: "center" }}>
-            <div style={{ flex: 1, background: "#fff", borderRadius: 22, padding: "9px 14px",
-              fontSize: 13, color: "#888", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>Todo El Histórico</div>
-            <div style={{ background: "#fff", borderRadius: 22, padding: "9px 14px", fontSize: 13,
-              color: "#555", fontWeight: 500, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", display: "flex", gap: 6, alignItems: "center", cursor: "pointer" }}>
-              ⚗️ Filtrar
+            <div style={{ flex: 1, background: "#fff", borderRadius: 22, padding: "6px 14px",
+              fontSize: 13, color: "#888", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+              {filterMonth ? `Filtrando: ${MONTHS_ES[parseInt(filterMonth.split("-")[1])-1]} ${filterMonth.split("-")[0]}` : "Todo El Histórico"}
             </div>
+            <input type="month" value={filterMonth} onChange={e => setFilterMonth(e.target.value)}
+              style={{ border: "1.5px solid #e8e8e8", borderRadius: 22, padding: "6px 12px", fontSize: 12,
+                background: "#fff", outline: "none", fontFamily: "inherit", cursor: "pointer" }} />
+            {filterMonth && <button onClick={() => setFilterMonth("")}
+              style={{ background: "#f0f0f0", border: "none", borderRadius: 22, padding: "6px 10px", fontSize: 12, cursor: "pointer" }}>✕</button>}
           </div>
 
           {ventasList.length === 0 && (
