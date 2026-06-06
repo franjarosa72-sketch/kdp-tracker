@@ -126,6 +126,7 @@ export default function App() {
   const [modal,     setModal]     = useState(null);
   const [form,      setForm]      = useState({});
   const [editingId, setEditingId] = useState(null);
+  const [selectedMonth, setSelectedMonth] = useState(null);
   const [filterType, setFilterType] = useState("all"); // gastos/ventas filter
   const [informeYear, setInformeYear] = useState(new Date().getFullYear());
 
@@ -509,7 +510,7 @@ export default function App() {
           <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 10px", color: "#1a1a1a" }}>% Comparativa mensual</h3>
           {monthsInYear.length === 0 && <p style={{ color: "#bbb", fontSize: 13 }}>Sin datos para {informeYear}</p>}
           {monthsInYear.map(({ ym, ingresos, gastos, resultado }) => (
-            <div key={ym} style={{ background: "#fff", borderRadius: 13, padding: "13px 15px", marginBottom: 8, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+            <div key={ym} onClick={() => setSelectedMonth(ym)} style={{ background: "#fff", borderRadius: 13, padding: "13px 15px", marginBottom: 8, boxShadow: "0 1px 4px rgba(0,0,0,0.05)", cursor: "pointer" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                 <span style={{ fontSize: 13, fontWeight: 600, color: "#1a1a1a" }}>{monthName(ym)}</span>
                 <span style={{ fontSize: 13, fontWeight: 700, fontFamily: "'DM Mono', monospace",
@@ -559,7 +560,65 @@ export default function App() {
         </div>
       )}
 
-      {/* ── BOTTOM NAV ── */}
+      {/* ── MODAL MES DETALLE ── */}
+      {selectedMonth && (() => {
+        const mvs = movements
+          .filter(m => m.productId === activePid && m.date.startsWith(selectedMonth))
+          .sort((a,b) => b.date.localeCompare(a.date));
+        const s = calcStats(movements, activePid, selectedMonth);
+        return (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "flex-end", zIndex: 200 }}
+            onClick={() => setSelectedMonth(null)}>
+            <div style={{ background: "#f7f5f0", borderRadius: "22px 22px 0 0", padding: "24px 20px 44px",
+              width: "100%", maxWidth: 420, margin: "0 auto", maxHeight: "80vh", overflowY: "auto" }}
+              onClick={e => e.stopPropagation()}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>{monthName(selectedMonth)}</h3>
+                <button onClick={() => setSelectedMonth(null)}
+                  style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer", color: "#aaa" }}>✕</button>
+              </div>
+              {/* Stats resumen */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16 }}>
+                {[["Ventas", fmtAbs(s.ingresos), "#1a7a4a"],["Gastos", fmtAbs(s.gastos), "#c0392b"],["ROI", s.roi.toFixed(0)+"%", s.roi>=0?"#1a7a4a":"#c0392b"]].map(([l,v,c]) => (
+                  <div key={l} style={{ background: "#fff", borderRadius: 11, padding: "10px 12px", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+                    <p style={{ margin: 0, fontSize: 10, color: "#bbb", fontWeight: 700, textTransform: "uppercase" }}>{l}</p>
+                    <p style={{ margin: "4px 0 0", fontSize: 14, fontWeight: 700, color: c, fontFamily: "'DM Mono', monospace" }}>{v}</p>
+                  </div>
+                ))}
+              </div>
+              {/* Resultado */}
+              <div style={{ background: s.resultado>=0?"#1a7a4a":"#c0392b", borderRadius: 13, padding: "12px 16px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 13, color: "rgba(255,255,255,0.8)" }}>Resultado</span>
+                <span style={{ fontSize: 20, fontWeight: 700, color: "#fff", fontFamily: "'DM Mono', monospace" }}>{fmtSigned(s.resultado)}</span>
+              </div>
+              {/* Movimientos */}
+              <h4 style={{ fontSize: 13, fontWeight: 700, color: "#888", textTransform: "uppercase", letterSpacing: 0.5, margin: "0 0 10px" }}>Movimientos</h4>
+              {mvs.length === 0 && <p style={{ color: "#bbb", fontSize: 13 }}>Sin movimientos</p>}
+              {mvs.map(m => (
+                <div key={m.id} style={{ background: "#fff", borderRadius: 12, padding: "11px 14px", marginBottom: 7,
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.05)", display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ width: 34, height: 34, borderRadius: 9, flexShrink: 0,
+                    background: m.type === "venta" ? "#e8f5e9" : "#fdecea",
+                    display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>
+                    {m.type === "venta" ? "📈" : "📉"}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1a1a1a",
+                      whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.concept}</p>
+                    <p style={{ margin: "2px 0 0", fontSize: 11, color: "#aaa" }}>{m.date}</p>
+                  </div>
+                  <span style={{ fontSize: 14, fontWeight: 700, fontFamily: "'DM Mono', monospace",
+                    color: m.type === "venta" ? "#1a7a4a" : "#c0392b", flexShrink: 0 }}>
+                    {m.type === "venta" ? "+" : "-"}{fmtAbs(m.amount)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── BOTTOM NAV ── */}}
       <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%",
         maxWidth: 420, background: "#fff", borderTop: "1px solid #f0f0f0", display: "flex",
         boxShadow: "0 -2px 12px rgba(0,0,0,0.06)", zIndex: 100 }}>
