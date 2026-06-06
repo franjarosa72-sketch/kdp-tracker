@@ -216,8 +216,8 @@ export default function App() {
 
   // ── FILTERED lists for gastos/ventas tabs
   const allMovSorted = [...movements].sort((a,b) => b.date.localeCompare(a.date));
-  const gastosList = allMovSorted.filter(m => m.productId === activePid && m.type === "gasto" && (!filterMonth || m.date.startsWith(filterMonth)));
-  const ventasList = allMovSorted.filter(m => m.productId === activePid && m.type === "venta" && (!filterMonth || m.date.startsWith(filterMonth)));
+  const gastosList = allMovSorted.filter(m => m.type === "gasto" && (!filterMonth || m.date.startsWith(filterMonth)));
+  const ventasList = allMovSorted.filter(m => m.type === "venta" && (!filterMonth || m.date.startsWith(filterMonth)));
 
   const resultado = monthStats.resultado;
   const isPos = resultado >= 0;
