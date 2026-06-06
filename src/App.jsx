@@ -409,7 +409,7 @@ export default function App() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
             <div>
               <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700 }}>Gastos</h1>
-              <p style={{ margin: "3px 0 0", fontSize: 13, color: "#999" }}>Total: {fmtAbs(totalGastos)}</p>
+              <p style={{ margin: "3px 0 0", fontSize: 13, color: "#999" }}>Total: {fmtAbs(gastosList.reduce((a,m) => a + m.amount, 0))}</p>
             </div>
             <button onClick={() => { setModal("gasto"); setForm({ date: now.toISOString().slice(0,10) }); }}
               style={{ background: "#c0392b", color: "#fff", border: "none", borderRadius: 22,
@@ -443,7 +443,7 @@ export default function App() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
             <div>
               <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700 }}>Ventas</h1>
-              <p style={{ margin: "3px 0 0", fontSize: 13, color: "#999" }}>Total: {fmtAbs(totalVentas)}</p>
+              <p style={{ margin: "3px 0 0", fontSize: 13, color: "#999" }}>Total: {fmtAbs(ventasList.reduce((a,m) => a + m.amount, 0))}</p>
             </div>
             <button onClick={() => { setModal("venta"); setForm({ date: now.toISOString().slice(0,10), concept: activeProduct?.name }); }}
               style={{ background: "#1a7a4a", color: "#fff", border: "none", borderRadius: 22,
