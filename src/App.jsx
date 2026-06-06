@@ -190,10 +190,16 @@ export default function App() {
   const availableYears = [...new Set(movements.filter(m => m.productId === activePid).map(m => m.date.slice(0,4)))].sort().reverse();
   const yearStats = calcStats(movements, activePid, yearPrefix);
 
+  // Meses con cualquier movimiento del producto activo en el año seleccionado
+  const monthsWithData = [...new Set(
+    movements
+      .filter(m => m.productId === activePid && m.date.startsWith(yearPrefix))
+      .map(m => m.date.slice(0,7))
+  )];
   const monthsInYear = Array.from({length: 12}, (_, i) => {
     const ym = `${informeYear}-${String(i+1).padStart(2,"0")}`;
     return { ym, ...calcStats(movements, activePid, ym) };
-  }).filter(m => m.ingresos > 0 || m.gastos > 0).reverse();
+  }).filter(m => monthsWithData.includes(m.ym)).reverse();
 
   const maxBar = Math.max(...monthsInYear.map(m => Math.max(m.ingresos, m.gastos)), 1);
 
