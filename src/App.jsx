@@ -41,8 +41,8 @@ function useStorage(key, def) {
   return [val, setVal];
 }
 
-function calcStats(movements, pid, prefix) {
-  const mvs = movements.filter(m => m.productId === pid && (!prefix || m.date.startsWith(prefix)));
+function calcStats(movements, pid, prefix, ignorePid = false) {
+  const mvs = movements.filter(m => (ignorePid || m.productId === pid) && (!prefix || m.date.startsWith(prefix)));
   const ingresos = mvs.filter(m => m.type === "venta").reduce((a, m) => a + m.amount, 0);
   const gastos   = mvs.filter(m => m.type === "gasto").reduce((a, m) => a + m.amount, 0);
   const resultado = ingresos - gastos;
@@ -368,8 +368,10 @@ export default function App() {
                 padding: "8px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>+ Nuevo</button>
           </div>
           {products.map(p => {
-            const at = calcStats(movements, p.id);
-            const ms = calcStats(movements, p.id, currentMonth);
+            const at = calcStats(movements, p.id, null, true);
+            const ms = calcStats(movements, p.id, currentMonth, true);
+            // Months with data
+            const prodMonths = [...new Set(movements.map(m => m.date.slice(0,7)))].sort().reverse();
             return (
               <div key={p.id} onClick={() => setActivePid(p.id)}
                 style={{ background: "#fff", borderRadius: 16, padding: "17px", marginBottom: 12, cursor: "pointer",
@@ -383,20 +385,42 @@ export default function App() {
                       borderRadius: 5, padding: "2px 7px", fontWeight: 700 }}>ACTIVO</span>}
                   </div>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 7 }}>
+                {/* Totales acumulados */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 7, marginBottom: 14 }}>
                   {[["Ingresos", fmtAbs(at.ingresos), "#1a7a4a"],["Gastos", fmtAbs(at.gastos), "#c0392b"],
                     ["Resultado", fmtSigned(at.resultado), at.resultado>=0?"#1a7a4a":"#c0392b"],
                     ["ROI", at.roi.toFixed(0)+"%", at.roi>=0?"#1a7a4a":"#c0392b"]].map(([l,v,c]) => (
                     <div key={l} style={{ background: "#f7f5f0", borderRadius: 9, padding: "9px 8px" }}>
                       <p style={{ margin: 0, fontSize: 9, color: "#bbb", fontWeight: 700, textTransform: "uppercase" }}>{l}</p>
-                      <p style={{ margin: "4px 0 0", fontSize: 12, fontWeight: 700, color: c, fontFamily: "'DM Mono', monospace" }}>{v}</p>
+                      <p style={{ margin: "4px 0 0", fontSize: 11, fontWeight: 700, color: c, fontFamily: "'DM Mono', monospace" }}>{v}</p>
                     </div>
                   ))}
                 </div>
-                <p style={{ margin: "10px 0 0", fontSize: 11, color: "#bbb" }}>
-                  Este mes: <span style={{ fontWeight: 600, color: ms.resultado>=0?"#1a7a4a":"#c0392b" }}>{fmtSigned(ms.resultado)}</span>
-                  {" · "}ROI mes: <span style={{ fontWeight: 600, color: ms.roi>=0?"#1a7a4a":"#c0392b" }}>{ms.roi.toFixed(0)}%</span>
-                </p>
+                {/* Desglose por meses */}
+                <p style={{ margin: "0 0 8px", fontSize: 11, fontWeight: 700, color: "#bbb", textTransform: "uppercase", letterSpacing: 0.5 }}>Por mes</p>
+                {prodMonths.map(ym => {
+                  const ms2 = calcStats(movements, p.id, ym, true);
+                  if (ms2.ingresos === 0 && ms2.gastos === 0) return null;
+                  return (
+                    <div key={ym} style={{ borderTop: "1px solid #f0f0f0", paddingTop: 8, marginBottom: 8 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: "#555" }}>{monthName(ym)}</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, fontFamily: "'DM Mono', monospace",
+                          color: ms2.resultado>=0?"#1a7a4a":"#c0392b" }}>{fmtSigned(ms2.resultado)}</span>
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 5 }}>
+                        {[["Ventas", fmtAbs(ms2.ingresos), "#1a7a4a"],["Gastos", fmtAbs(ms2.gastos), "#c0392b"],
+                          ["Resultado", fmtSigned(ms2.resultado), ms2.resultado>=0?"#1a7a4a":"#c0392b"],
+                          ["ROI", ms2.roi.toFixed(0)+"%", ms2.roi>=0?"#1a7a4a":"#c0392b"]].map(([l,v,c]) => (
+                          <div key={l} style={{ background: "#f7f5f0", borderRadius: 7, padding: "6px 6px" }}>
+                            <p style={{ margin: 0, fontSize: 8, color: "#bbb", fontWeight: 700, textTransform: "uppercase" }}>{l}</p>
+                            <p style={{ margin: "3px 0 0", fontSize: 10, fontWeight: 700, color: c, fontFamily: "'DM Mono', monospace" }}>{v}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             );
           })}
