@@ -116,7 +116,13 @@ export default function App() {
   const [products,  setProducts]  = useStorage(STORAGE_KEYS.products,  defaultProducts);
   const [movements, setMovements] = useStorage(STORAGE_KEYS.movements, defaultMovements);
   const [tab,       setTab]       = useState("inicio");
-  const [activePid, setActivePid] = useState(1);
+  const [activePid, setActivePid] = useState(() => {
+    try {
+      const s = localStorage.getItem("kdp-products");
+      const prods = s ? JSON.parse(s) : [];
+      return prods.length > 0 ? prods[0].id : 1;
+    } catch { return 1; }
+  });
   const [modal,     setModal]     = useState(null);
   const [form,      setForm]      = useState({});
   const [editingId, setEditingId] = useState(null);
