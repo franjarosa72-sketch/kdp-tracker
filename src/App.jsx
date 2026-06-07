@@ -620,26 +620,53 @@ export default function App() {
                 ))}
               </div>
             ) : (
-              [["🏆 Más rentables", rankings.slice(0,3)], ["📉 Menor rentabilidad", [...rankings].reverse().slice(0,3).filter(r => r.resultado < rankings[0].resultado)]].map(([title, list]) => (
-                list.length > 0 && <div key={title} style={{ marginBottom: 18 }}>
-                  <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 10px" }}>{title} · {informeYear}</h3>
-                  {list.map(({ p, resultado, roi }, i) => (
-                    <div key={p.id} style={{ background: "#fff", borderRadius: 13, padding: "12px 15px", marginBottom: 7,
-                      boxShadow: "0 1px 4px rgba(0,0,0,0.05)", display: "flex", alignItems: "center", gap: 11 }}>
-                      <span style={{ fontSize: 16, fontWeight: 700, color: "#bbb", width: 20 }}>{i+1}</span>
-                      <div style={{ width: 34, height: 34, borderRadius: 9, background: p.color,
-                        display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17 }}>{p.emoji}</div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1a1a1a",
-                          whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</p>
-                        <p style={{ margin: 0, fontSize: 11, color: "#bbb" }}>ROI {roi.toFixed(0)}%</p>
-                      </div>
-                      <span style={{ fontSize: 14, fontWeight: 700, fontFamily: "'DM Mono', monospace",
-                        color: resultado >= 0 ? "#1a7a4a" : "#c0392b" }}>{fmtSigned(resultado)}</span>
+              (() => {
+                const positivos = rankings.filter(r => r.resultado > 0);
+                const negativos = [...rankings].reverse().filter(r => r.resultado < 0);
+                return (
+                  <>
+                    <div style={{ marginBottom: 18 }}>
+                      <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 10px" }}>🏆 Más rentables · {informeYear}</h3>
+                      {positivos.length === 0
+                        ? <p style={{ fontSize: 13, color: "#bbb", fontStyle: "italic", padding: "10px 0" }}>Ningún libro en positivo aún</p>
+                        : positivos.slice(0,3).map(({ p, resultado, roi }, i) => (
+                          <div key={p.id} style={{ background: "#fff", borderRadius: 13, padding: "12px 15px", marginBottom: 7,
+                            boxShadow: "0 1px 4px rgba(0,0,0,0.05)", display: "flex", alignItems: "center", gap: 11 }}>
+                            <span style={{ fontSize: 16, fontWeight: 700, color: "#bbb", width: 20 }}>{i+1}</span>
+                            <div style={{ width: 34, height: 34, borderRadius: 9, background: p.color,
+                              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17 }}>{p.emoji}</div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1a1a1a",
+                                whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</p>
+                              <p style={{ margin: 0, fontSize: 11, color: "#bbb" }}>ROI {roi.toFixed(0)}%</p>
+                            </div>
+                            <span style={{ fontSize: 14, fontWeight: 700, fontFamily: "'DM Mono', monospace", color: "#1a7a4a" }}>{fmtSigned(resultado)}</span>
+                          </div>
+                        ))
+                      }
                     </div>
-                  ))}
-                </div>
-              ))
+                    {negativos.length > 0 && (
+                      <div style={{ marginBottom: 18 }}>
+                        <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 10px" }}>📉 Menor rentabilidad · {informeYear}</h3>
+                        {negativos.slice(0,3).map(({ p, resultado, roi }, i) => (
+                          <div key={p.id} style={{ background: "#fff", borderRadius: 13, padding: "12px 15px", marginBottom: 7,
+                            boxShadow: "0 1px 4px rgba(0,0,0,0.05)", display: "flex", alignItems: "center", gap: 11 }}>
+                            <span style={{ fontSize: 16, fontWeight: 700, color: "#bbb", width: 20 }}>{i+1}</span>
+                            <div style={{ width: 34, height: 34, borderRadius: 9, background: p.color,
+                              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17 }}>{p.emoji}</div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1a1a1a",
+                                whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</p>
+                              <p style={{ margin: 0, fontSize: 11, color: "#bbb" }}>ROI {roi.toFixed(0)}%</p>
+                            </div>
+                            <span style={{ fontSize: 14, fontWeight: 700, fontFamily: "'DM Mono', monospace", color: "#c0392b" }}>{fmtSigned(resultado)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                );
+              })()
             )}
           </div>
           <div style={{ height: 20 }} />
