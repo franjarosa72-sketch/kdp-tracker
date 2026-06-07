@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 
 const STORAGE_KEYS = { products: "kdp-products", movements: "kdp-movements" };
 
-// Limpia datos de ejemplo si existían de sesiones anteriores
+// Limpia datos de ejemplo y normaliza productIds
 if (typeof localStorage !== "undefined") {
   const flagKey = "kdp-cleared-v2";
   if (!localStorage.getItem(flagKey)) {
@@ -10,6 +10,16 @@ if (typeof localStorage !== "undefined") {
     localStorage.removeItem("kdp-movements");
     localStorage.setItem(flagKey, "1");
   }
+  // Normaliza: si solo hay un producto, todos los movimientos usan su id
+  try {
+    const prods = JSON.parse(localStorage.getItem("kdp-products") || "[]");
+    const movs = JSON.parse(localStorage.getItem("kdp-movements") || "[]");
+    if (prods.length === 1 && movs.length > 0) {
+      const pid = prods[0].id;
+      const fixed = movs.map(m => ({...m, productId: pid}));
+      localStorage.setItem("kdp-movements", JSON.stringify(fixed));
+    }
+  } catch(e) {}
 }
 
 const EMOJIS = ["📚","🥗","🍳","🏋️","✍️","🎯","💡","🌿","🔥","⭐"];
@@ -143,6 +153,16 @@ export default function App() {
     setMovements(prev => prev.filter(m => m.id !== id));
   }
 
+  function deleteProduct(pid) {
+    if (!window.confirm("¿Seguro que quieres borrar este producto y todos sus movimientos?")) return;
+    setProducts(prev => prev.filter(p => p.id !== pid));
+    setMovements(prev => prev.filter(m => m.productId !== pid));
+    if (activePid === pid) {
+      const remaining = products.filter(p => p.id !== pid);
+      if (remaining.length > 0) setActivePid(remaining[0].id);
+    }
+  }
+
   function openEdit(m) {
     setEditingId(m.id);
     setForm({
@@ -199,17 +219,17 @@ export default function App() {
   // ── INFORMES: months for active product in selected year
   const yearPrefix = String(informeYear);
   const availableYears = [...new Set(movements.filter(m => m.productId === activePid).map(m => m.date.slice(0,4)))].sort().reverse();
-  const yearStats = calcStats(movements, activePid, yearPrefix, true);
+  const yearStats = calcStats(movements, activePid, yearPrefix);
 
   // Meses con cualquier movimiento del producto activo en el año seleccionado
   const monthsWithData = [...new Set(
     movements
-      .filter(m => m.date.startsWith(yearPrefix))
+      .filter(m => m.productId === activePid && m.date.startsWith(yearPrefix))
       .map(m => m.date.slice(0,7))
   )];
   const monthsInYear = Array.from({length: 12}, (_, i) => {
     const ym = `${informeYear}-${String(i+1).padStart(2,"0")}`;
-    return { ym, ...calcStats(movements, activePid, ym, true) };
+    return { ym, ...calcStats(movements, activePid, ym) };
   }).filter(m => monthsWithData.includes(m.ym)).reverse();
 
   const maxBar = Math.max(...monthsInYear.map(m => Math.max(m.ingresos, m.gastos)), 1);
@@ -219,7 +239,7 @@ export default function App() {
 
   // ── FILTERED lists for gastos/ventas tabs
   const allMovSorted = [...movements].sort((a,b) => b.date.localeCompare(a.date));
-  const gastosList = allMovSorted.filter(m => m.type === "gasto" && (!filterMonth || m.date.startsWith(filterMonth)));
+  const gastosList = allMovSorted.filter(m => m.type === "gasto" && (!filterMonth || m.date.startsWith(filterMonth))).map(m => ({...m, productId: activePid}));
   const ventasList = allMovSorted.filter(m => m.type === "venta" && (!filterMonth || m.date.startsWith(filterMonth)));
 
   const resultado = monthStats.resultado;
@@ -371,8 +391,8 @@ export default function App() {
                 padding: "8px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>+ Nuevo</button>
           </div>
           {products.map(p => {
-            const at = calcStats(movements, p.id, null, true);
-            const ms = calcStats(movements, p.id, currentMonth, true);
+            const at = calcStats(movements, p.id);
+            const ms = calcStats(movements, p.id, currentMonth);
             // Months with data
             const prodMonths = [...new Set(movements.map(m => m.date.slice(0,7)))].sort().reverse();
             return (
@@ -382,11 +402,13 @@ export default function App() {
                 <div style={{ display: "flex", gap: 13, alignItems: "center", marginBottom: 13 }}>
                   <div style={{ width: 46, height: 46, borderRadius: 12, background: p.color, flexShrink: 0,
                     display: "flex", alignItems: "center", justifyContent: "center", fontSize: 23 }}>{p.emoji}</div>
-                  <div>
+                  <div style={{ flex: 1 }}>
                     <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#1a1a1a" }}>{p.name}</p>
                     {p.id === activePid && <span style={{ fontSize: 10, background: "#1a1a1a", color: "#fff",
                       borderRadius: 5, padding: "2px 7px", fontWeight: 700 }}>ACTIVO</span>}
                   </div>
+                  <button onClick={e => { e.stopPropagation(); deleteProduct(p.id); }}
+                    style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: "#ddd", flexShrink: 0 }}>🗑</button>
                 </div>
                 {/* Totales acumulados */}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 7, marginBottom: 14 }}>
@@ -402,7 +424,7 @@ export default function App() {
                 {/* Desglose por meses */}
                 <p style={{ margin: "0 0 8px", fontSize: 11, fontWeight: 700, color: "#bbb", textTransform: "uppercase", letterSpacing: 0.5 }}>Por mes</p>
                 {prodMonths.map(ym => {
-                  const ms2 = calcStats(movements, p.id, ym, true);
+                  const ms2 = calcStats(movements, p.id, ym);
                   if (ms2.ingresos === 0 && ms2.gastos === 0) return null;
                   return (
                     <div key={ym} style={{ borderTop: "1px solid #f0f0f0", paddingTop: 8, marginBottom: 8 }}>
