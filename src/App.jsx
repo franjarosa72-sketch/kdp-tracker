@@ -138,7 +138,10 @@ export default function App() {
   function setF(k, v) { setForm(f => ({...f, [k]: v})); }
 
   // ── ACTIONS
-  function deleteMovement(id) { setMovements(prev => prev.filter(m => m.id !== id)); }
+  function deleteMovement(id) {
+    if (!window.confirm("¿Seguro que quieres borrar este movimiento?")) return;
+    setMovements(prev => prev.filter(m => m.id !== id));
+  }
 
   function openEdit(m) {
     setEditingId(m.id);
@@ -196,17 +199,17 @@ export default function App() {
   // ── INFORMES: months for active product in selected year
   const yearPrefix = String(informeYear);
   const availableYears = [...new Set(movements.filter(m => m.productId === activePid).map(m => m.date.slice(0,4)))].sort().reverse();
-  const yearStats = calcStats(movements, activePid, yearPrefix);
+  const yearStats = calcStats(movements, activePid, yearPrefix, true);
 
   // Meses con cualquier movimiento del producto activo en el año seleccionado
   const monthsWithData = [...new Set(
     movements
-      .filter(m => m.productId === activePid && m.date.startsWith(yearPrefix))
+      .filter(m => m.date.startsWith(yearPrefix))
       .map(m => m.date.slice(0,7))
   )];
   const monthsInYear = Array.from({length: 12}, (_, i) => {
     const ym = `${informeYear}-${String(i+1).padStart(2,"0")}`;
-    return { ym, ...calcStats(movements, activePid, ym) };
+    return { ym, ...calcStats(movements, activePid, ym, true) };
   }).filter(m => monthsWithData.includes(m.ym)).reverse();
 
   const maxBar = Math.max(...monthsInYear.map(m => Math.max(m.ingresos, m.gastos)), 1);
@@ -567,7 +570,7 @@ export default function App() {
           ))}
 
           {/* Rankings */}
-          {[["🏆 Más rentables", rankings.slice(0,3)], ["📉 Menor rentabilidad", [...rankings].reverse().slice(0,3)]].map(([title, list]) => (
+          {products.length > 1 && [["🏆 Más rentables", rankings.slice(0,3)], ["📉 Menor rentabilidad", [...rankings].reverse().slice(0,3)]].map(([title, list]) => (
             <div key={title} style={{ marginTop: 18 }}>
               <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 10px" }}>{title} · {informeYear}</h3>
               {list.map(({ p, resultado, roi }, i) => (
