@@ -38,6 +38,25 @@ const MONTHS_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Ago
 
 function fmtAbs(n) { return n.toFixed(2).replace(".", ",") + " €"; }
 function fmtSigned(n) { return (n >= 0 ? "+" : "-") + fmtAbs(Math.abs(n)); }
+function exportToCSV(data, filename) {
+  const headers = ["Fecha", "Concepto", "Importe (€)", "Mes devengo", "Notas"];
+  const rows = data.map(m => [
+    m.date,
+    m.concept,
+    m.amount.toFixed(2).replace(".", ","),
+    m.devengoMonth || "",
+    m.notes || ""
+  ]);
+  const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(";")).join("\n");
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function monthName(ym) {
   const [y, m] = ym.split("-");
   return MONTHS_ES[parseInt(m)-1] + " De " + y;
@@ -460,9 +479,14 @@ export default function App() {
               <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700 }}>Gastos</h1>
               <p style={{ margin: "3px 0 0", fontSize: 13, color: "#999" }}>Total: {fmtAbs(gastosList.reduce((a,m) => a + m.amount, 0))}</p>
             </div>
-            <button onClick={() => { setModal("gasto"); setForm({ date: now.toISOString().slice(0,10) }); }}
-              style={{ background: "#c0392b", color: "#fff", border: "none", borderRadius: 22,
-                padding: "10px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>+ Nuevo gasto</button>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => exportToCSV(gastosList, "gastos-kdp.csv")}
+                style={{ background: "#f0f0f0", color: "#555", border: "none", borderRadius: 22,
+                  padding: "10px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>📥 Excel</button>
+              <button onClick={() => { setModal("gasto"); setForm({ date: now.toISOString().slice(0,10) }); }}
+                style={{ background: "#c0392b", color: "#fff", border: "none", borderRadius: 22,
+                  padding: "10px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>+ Nuevo gasto</button>
+            </div>
           </div>
 
           <div style={{ display: "flex", gap: 8, margin: "16px 0 14px", alignItems: "center" }}>
@@ -494,9 +518,14 @@ export default function App() {
               <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700 }}>Ventas</h1>
               <p style={{ margin: "3px 0 0", fontSize: 13, color: "#999" }}>Total: {fmtAbs(ventasList.reduce((a,m) => a + m.amount, 0))}</p>
             </div>
-            <button onClick={() => { setModal("venta"); setForm({ date: now.toISOString().slice(0,10), concept: activeProduct?.name }); }}
-              style={{ background: "#1a7a4a", color: "#fff", border: "none", borderRadius: 22,
-                padding: "10px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>+ Nueva venta</button>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => exportToCSV(ventasList, "ventas-kdp.csv")}
+                style={{ background: "#f0f0f0", color: "#555", border: "none", borderRadius: 22,
+                  padding: "10px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>📥 Excel</button>
+              <button onClick={() => { setModal("venta"); setForm({ date: now.toISOString().slice(0,10), concept: activeProduct?.name }); }}
+                style={{ background: "#1a7a4a", color: "#fff", border: "none", borderRadius: 22,
+                  padding: "10px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>+ Nueva venta</button>
+            </div>
           </div>
 
           <div style={{ display: "flex", gap: 8, margin: "16px 0 14px", alignItems: "center" }}>
