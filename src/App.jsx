@@ -38,23 +38,53 @@ const MONTHS_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Ago
 
 function fmtAbs(n) { return n.toFixed(2).replace(".", ",") + " €"; }
 function fmtSigned(n) { return (n >= 0 ? "+" : "-") + fmtAbs(Math.abs(n)); }
-function exportToCSV(data, filename) {
+async function exportToXLSX(data, filename, periodo) {
+  // Load SheetJS from CDN
+  if (!window.XLSX) {
+    await new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  }
+  const XLSX = window.XLSX;
+  const wb = XLSX.utils.book_new();
+
+  // Build rows: title + headers + data
+  const titleRow = [periodo];
   const headers = ["Fecha", "Concepto", "Importe (€)", "Mes devengo", "Notas"];
   const rows = data.map(m => [
     m.date,
     m.concept,
-    m.amount.toFixed(2).replace(".", ","),
+    parseFloat(m.amount.toFixed(2)),
     m.devengoMonth || "",
     m.notes || ""
   ]);
-  const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(";")).join("\n");
-  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
+
+  const wsData = [titleRow, [], headers, ...rows];
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+  // Style title: merge cells and bold
+  ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 4 } }];
+  if (ws["A1"]) {
+    ws["A1"].s = {
+      font: { bold: true, sz: 16 },
+      alignment: { horizontal: "center" }
+    };
+  }
+  // Style headers row (row index 2)
+  headers.forEach((_, i) => {
+    const cellRef = XLSX.utils.encode_cell({ r: 2, c: i });
+    if (ws[cellRef]) ws[cellRef].s = { font: { bold: true } };
+  });
+
+  // Column widths
+  ws["!cols"] = [{ wch: 14 }, { wch: 35 }, { wch: 14 }, { wch: 14 }, { wch: 30 }];
+
+  XLSX.utils.book_append_sheet(wb, ws, "Datos");
+  XLSX.writeFile(wb, filename);
 }
 
 function monthName(ym) {
@@ -480,7 +510,7 @@ export default function App() {
               <p style={{ margin: "3px 0 0", fontSize: 13, color: "#999" }}>Total: {fmtAbs(gastosList.reduce((a,m) => a + m.amount, 0))}</p>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => exportToCSV(gastosList, "gastos-kdp.csv")}
+              <button onClick={() => exportToXLSX(gastosList, "gastos-kdp.xlsx", filterMonth ? `Gastos · ${MONTHS_ES[parseInt(filterMonth.split("-")[1])-1]} ${filterMonth.split("-")[0]}` : `Gastos · Histórico completo ${new Date().getFullYear()}`)}
                 style={{ background: "#f0f0f0", color: "#555", border: "none", borderRadius: 22,
                   padding: "10px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>📥 Excel</button>
               <button onClick={() => { setModal("gasto"); setForm({ date: now.toISOString().slice(0,10) }); }}
@@ -519,7 +549,7 @@ export default function App() {
               <p style={{ margin: "3px 0 0", fontSize: 13, color: "#999" }}>Total: {fmtAbs(ventasList.reduce((a,m) => a + m.amount, 0))}</p>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => exportToCSV(ventasList, "ventas-kdp.csv")}
+              <button onClick={() => exportToXLSX(ventasList, "ventas-kdp.xlsx", filterMonth ? `Ventas · ${MONTHS_ES[parseInt(filterMonth.split("-")[1])-1]} ${filterMonth.split("-")[0]}` : `Ventas · Histórico completo ${new Date().getFullYear()}`)}
                 style={{ background: "#f0f0f0", color: "#555", border: "none", borderRadius: 22,
                   padding: "10px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>📥 Excel</button>
               <button onClick={() => { setModal("venta"); setForm({ date: now.toISOString().slice(0,10), concept: activeProduct?.name }); }}
