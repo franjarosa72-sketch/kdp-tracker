@@ -95,6 +95,58 @@ async function exportToXLSX(data, filename, periodo) {
   XLSX.writeFile(wb, filename);
 }
 
+async function exportInformesXLSX(movements, activePid, periodo, prefix) {
+  if (!window.XLSX) {
+    await new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+      s.onload = resolve; s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  }
+  const XLSX = window.XLSX;
+  const wb = XLSX.utils.book_new();
+
+  const mvs = movements.filter(m => m.productId === activePid && m.date.startsWith(prefix));
+  const ventas = mvs.filter(m => m.type === "venta");
+  const gastos = mvs.filter(m => m.type === "gasto");
+  const totalVentas = ventas.reduce((a,m) => a + m.amount, 0);
+  const totalGastos = gastos.reduce((a,m) => a + m.amount, 0);
+  const resultado = totalVentas - totalGastos;
+  const roi = totalGastos > 0 ? ((resultado / totalGastos) * 100) : (totalVentas > 0 ? 100 : 0);
+
+  const rows = [
+    [periodo],
+    [`Ventas: ${totalVentas.toFixed(2).replace(".",",")} €  |  Gastos: ${totalGastos.toFixed(2).replace(".",",")} €  |  Resultado: ${resultado.toFixed(2).replace(".",",")} €  |  ROI: ${roi.toFixed(0)}%`],
+    [],
+    ["Fecha", "Tipo", "Concepto", "Importe (€)", "Mes devengo", "Notas"],
+    ...mvs.sort((a,b) => b.date.localeCompare(a.date)).map(m => [
+      m.date,
+      m.type === "venta" ? "Venta" : "Gasto",
+      m.concept,
+      parseFloat(m.amount.toFixed(2)),
+      m.devengoMonth || "",
+      m.notes || ""
+    ])
+  ];
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws["!merges"] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 5 } },
+    { s: { r: 1, c: 0 }, e: { r: 1, c: 5 } },
+  ];
+  if (ws["A1"]) ws["A1"].s = { font: { bold: true, sz: 16 }, alignment: { horizontal: "center" } };
+  if (ws["A2"]) ws["A2"].s = { font: { bold: true, sz: 12 }, alignment: { horizontal: "center" } };
+  [0,1,2,3,4,5].forEach(i => {
+    const ref = XLSX.utils.encode_cell({ r: 3, c: i });
+    if (ws[ref]) ws[ref].s = { font: { bold: true } };
+  });
+  ws["!cols"] = [{ wch: 14 }, { wch: 8 }, { wch: 35 }, { wch: 14 }, { wch: 14 }, { wch: 30 }];
+
+  XLSX.utils.book_append_sheet(wb, ws, "Informe");
+  XLSX.writeFile(wb, `informe-kdp-${prefix}.xlsx`);
+}
+
 function monthName(ym) {
   const [y, m] = ym.split("-");
   return MONTHS_ES[parseInt(m)-1] + " De " + y;
@@ -590,8 +642,12 @@ export default function App() {
       {/* ── INFORMES ── */}
       {tab === "informes" && (
         <div style={{ padding: "28px 20px 0" }}>
-          <h1 style={{ margin: "0 0 4px", fontSize: 24, fontWeight: 700 }}>Informes</h1>
-          <p style={{ margin: "0 0 16px", fontSize: 12, color: "#aaa" }}>Consulta cualquier periodo o ejercicio</p>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
+            <div>
+              <h1 style={{ margin: "0 0 4px", fontSize: 24, fontWeight: 700 }}>Informes</h1>
+              <p style={{ margin: "0 0 16px", fontSize: 12, color: "#aaa" }}>Consulta cualquier periodo o ejercicio</p>
+            </div>
+          </div>
 
           {/* Year selector */}
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
@@ -629,15 +685,28 @@ export default function App() {
             ))}
           </div>
 
+          {/* Exportar informe */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+            <button onClick={() => exportInformesXLSX(movements, activePid, `Informe anual ${informeYear}`, String(informeYear))}
+              style={{ flex: 1, background: "#1a1a1a", color: "#fff", border: "none", borderRadius: 12,
+                padding: "11px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+              📥 Excel año {informeYear}
+            </button>
+          </div>
+
           {/* Comparativa mensual */}
           <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 10px", color: "#1a1a1a" }}>% Comparativa mensual</h3>
           {monthsInYear.length === 0 && <p style={{ color: "#bbb", fontSize: 13 }}>Sin datos para {informeYear}</p>}
           {monthsInYear.map(({ ym, ingresos, gastos, resultado }) => (
-            <div key={ym} onClick={() => setSelectedMonth(ym)} style={{ background: "#fff", borderRadius: 13, padding: "13px 15px", marginBottom: 8, boxShadow: "0 1px 4px rgba(0,0,0,0.05)", cursor: "pointer" }}>
+            <div key={ym} style={{ background: "#fff", borderRadius: 13, padding: "13px 15px", marginBottom: 8, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: "#1a1a1a" }}>{monthName(ym)}</span>
-                <span style={{ fontSize: 13, fontWeight: 700, fontFamily: "'DM Mono', monospace",
-                  color: resultado >= 0 ? "#1a7a4a" : "#c0392b" }}>{fmtSigned(resultado)}</span>
+                <span onClick={() => setSelectedMonth(ym)} style={{ fontSize: 13, fontWeight: 600, color: "#1a1a1a", cursor: "pointer", flex: 1 }}>{monthName(ym)}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, fontFamily: "'DM Mono', monospace",
+                    color: resultado >= 0 ? "#1a7a4a" : "#c0392b" }}>{fmtSigned(resultado)}</span>
+                  <button onClick={e => { e.stopPropagation(); exportInformesXLSX(movements, activePid, `Informe ${monthName(ym)}`, ym); }}
+                    style={{ background: "#f0f0f0", border: "none", borderRadius: 8, padding: "4px 8px", fontSize: 11, cursor: "pointer", color: "#555" }}>📥</button>
+                </div>
               </div>
               {/* Bar: ventas */}
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
