@@ -52,8 +52,10 @@ async function exportToXLSX(data, filename, periodo) {
   const XLSX = window.XLSX;
   const wb = XLSX.utils.book_new();
 
-  // Build rows: title + headers + data
+  // Build rows: title + total + headers + data
+  const total = parseFloat(data.reduce((a,m) => a + m.amount, 0).toFixed(2));
   const titleRow = [periodo];
+  const totalHeaderRow = [`Total: ${total.toFixed(2).replace(".", ",")} €`];
   const headers = ["Fecha", "Concepto", "Importe (€)", "Mes devengo", "Notas"];
   const rows = data.map(m => [
     m.date,
@@ -63,20 +65,26 @@ async function exportToXLSX(data, filename, periodo) {
     m.notes || ""
   ]);
 
-  const wsData = [titleRow, [], headers, ...rows];
+  const wsData = [titleRow, totalHeaderRow, [], headers, ...rows];
   const ws = XLSX.utils.aoa_to_sheet(wsData);
 
   // Style title: merge cells and bold
-  ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 4 } }];
+  ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 4 } }, { s: { r: 1, c: 0 }, e: { r: 1, c: 4 } }];
   if (ws["A1"]) {
     ws["A1"].s = {
       font: { bold: true, sz: 16 },
       alignment: { horizontal: "center" }
     };
   }
-  // Style headers row (row index 2)
+  if (ws["A2"]) {
+    ws["A2"].s = {
+      font: { bold: true, sz: 13 },
+      alignment: { horizontal: "center" }
+    };
+  }
+  // Style headers row (row index 3)
   headers.forEach((_, i) => {
-    const cellRef = XLSX.utils.encode_cell({ r: 2, c: i });
+    const cellRef = XLSX.utils.encode_cell({ r: 3, c: i });
     if (ws[cellRef]) ws[cellRef].s = { font: { bold: true } };
   });
 
