@@ -276,14 +276,30 @@ export default function App() {
   function saveForecast() {
     const amt = parseFloat((form.amount || "0").replace(",", "."));
     if (!amt || !form.devengoMonth) return;
-    setForecasts(prev => [...prev, {
-      id: Date.now(),
-      productId: activePid,
-      devengoMonth: form.devengoMonth,
-      amount: amt,
-      notes: form.notes || "",
-    }]);
+    if (form._editingForecastId) {
+      setForecasts(prev => prev.map(f => f.id === form._editingForecastId ? {
+        ...f, devengoMonth: form.devengoMonth, amount: amt, notes: form.notes || ""
+      } : f));
+    } else {
+      setForecasts(prev => [...prev, {
+        id: Date.now(),
+        productId: activePid,
+        devengoMonth: form.devengoMonth,
+        amount: amt,
+        notes: form.notes || "",
+      }]);
+    }
     setModal(null); setForm({});
+  }
+
+  function openEditForecast(f) {
+    setForm({
+      devengoMonth: f.devengoMonth,
+      amount: String(f.amount),
+      notes: f.notes || "",
+      _editingForecastId: f.id,
+    });
+    setModal("forecast");
   }
 
   function markAsCollected(forecast) {
@@ -713,6 +729,8 @@ export default function App() {
                             padding: "8px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap" }}>
                           ✓ Cobrado
                         </button>
+                        <button onClick={() => openEditForecast(f)}
+                          style={{ background: "none", border: "none", color: "#bbb", fontSize: 15, cursor: "pointer", padding: "0 2px", flexShrink: 0 }}>✏️</button>
                         <button onClick={() => deleteForecast(f.id)}
                           style={{ background: "none", border: "none", color: "#ddd", fontSize: 15, cursor: "pointer", padding: "0 2px", flexShrink: 0 }}>🗑</button>
                       </div>
@@ -1064,7 +1082,7 @@ export default function App() {
 
       {/* ── MODAL PREVISIÓN DE REGALÍAS ── */}
       {modal === "forecast" && (
-        <Modal title="⏳ Nueva previsión de regalías" onClose={() => { setModal(null); setForm({}); }}>
+        <Modal title={form._editingForecastId ? "✏️ Editar previsión" : "⏳ Nueva previsión de regalías"} onClose={() => { setModal(null); setForm({}); }}>
           <Field label="Mes al que pertenecen las regalías">
             <select value={form.devengoMonth || ""} onChange={e => setF("devengoMonth", e.target.value)} style={inputStyle}>
               <option value="">Seleccionar mes...</option>
@@ -1091,7 +1109,7 @@ export default function App() {
           <button onClick={saveForecast}
             style={{ width: "100%", background: "#b8860b", color: "#fff", border: "none", borderRadius: 14,
               padding: "16px", fontSize: 15, fontWeight: 700, cursor: "pointer", marginTop: 4 }}>
-            Guardar previsión
+            {form._editingForecastId ? "Guardar cambios" : "Guardar previsión"}
           </button>
         </Modal>
       )}
