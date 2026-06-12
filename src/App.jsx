@@ -37,6 +37,7 @@ const CATS_GASTO = [
 const MONTHS_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 
 function fmtAbs(n) { return n.toFixed(2).replace(".", ",") + " €"; }
+function maskAmount(str) { return "•••• €"; }
 function fmtSigned(n) { return (n >= 0 ? "+" : "-") + fmtAbs(Math.abs(n)); }
 async function exportToXLSX(data, filename, periodo) {
   // Load SheetJS from CDN
@@ -171,7 +172,7 @@ function calcStats(movements, pid, prefix, ignorePid = false) {
 
 // ── COMPONENTS ──────────────────────────────────────────────────────────────
 
-function MovementRow({ m, onDelete, onEdit, showProduct, products }) {
+function MovementRow({ m, onDelete, onEdit, showProduct, products, privacyMode }) {
   const prod = products.find(p => p.id === m.productId);
   return (
     <div style={{ background: "#fff", borderRadius: 14, padding: "13px 16px", marginBottom: 8,
@@ -191,7 +192,7 @@ function MovementRow({ m, onDelete, onEdit, showProduct, products }) {
       </div>
       <span style={{ fontSize: 14, fontWeight: 700, fontFamily: "'DM Mono', monospace", whiteSpace: "nowrap",
         color: m.type === "venta" ? "#1a7a4a" : "#c0392b" }}>
-        {m.type === "venta" ? "+" : "-"}{fmtAbs(m.amount)}
+        {privacyMode ? "•••• €" : `${m.type === "venta" ? "+" : "-"}${fmtAbs(m.amount)}`}
       </span>
       <button onClick={() => onEdit && onEdit(m)}
         style={{ background: "none", border: "none", color: "#bbb", fontSize: 15, cursor: "pointer", padding: "0 2px", flexShrink: 0 }}>✏️</button>
@@ -248,6 +249,7 @@ export default function App() {
   const [editingId, setEditingId] = useState(null);
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [filterMonth, setFilterMonth] = useState("");
+  const [privacyMode, setPrivacyMode] = useState(false);
   const [filterType, setFilterType] = useState("all"); // gastos/ventas filter
   const [informeYear, setInformeYear] = useState(new Date().getFullYear());
 
@@ -402,9 +404,17 @@ export default function App() {
                 Resumen de {MONTHS_ES[now.getMonth()].toLowerCase()} de {now.getFullYear()}
               </p>
             </div>
-            <button onClick={() => { setModal("product"); setForm({ emoji: "📚", color: "#e8f5e9" }); }}
-              style={{ background: "#1a1a1a", color: "#fff", border: "none", borderRadius: 10,
-                padding: "8px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>+ Libro</button>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => setPrivacyMode(p => !p)}
+                style={{ background: privacyMode ? "#1a1a1a" : "#f0f0f0", color: privacyMode ? "#fff" : "#555",
+                  border: "none", borderRadius: 10, width: 36, height: 36, fontSize: 16, cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center" }}>
+                {privacyMode ? "🙈" : "👁️"}
+              </button>
+              <button onClick={() => { setModal("product"); setForm({ emoji: "📚", color: "#e8f5e9" }); }}
+                style={{ background: "#1a1a1a", color: "#fff", border: "none", borderRadius: 10,
+                  padding: "8px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>+ Libro</button>
+            </div>
           </div>
 
           {/* Product selector */}
@@ -434,7 +444,7 @@ export default function App() {
               📊 Resultado final del mes
             </p>
             <p style={{ margin: 0, fontSize: 38, fontWeight: 700, color: "#fff", fontFamily: "'DM Mono', monospace", letterSpacing: -1 }}>
-              {resultado >= 0 ? "+" : ""}{fmtAbs(Math.abs(resultado))}
+              {privacyMode ? "•••••• €" : `${resultado >= 0 ? "+" : ""}${fmtAbs(Math.abs(resultado))}`}
             </p>
             <p style={{ margin: "6px 0 0", fontSize: 12, color: "rgba(255,255,255,0.65)" }}>
               {isPos ? "¡Mes rentable! 🎉" : "Estás gastando más de lo que ingresas"}
@@ -449,7 +459,7 @@ export default function App() {
                   <span style={{ fontSize: 15 }}>{ic}</span>
                   <span style={{ fontSize: 12, color: "#aaa", fontWeight: 500 }}>{lb}</span>
                 </div>
-                <p style={{ margin: 0, fontSize: 20, fontWeight: 700, color: "#1a1a1a", fontFamily: "'DM Mono', monospace" }}>{fmtAbs(val)}</p>
+                <p style={{ margin: 0, fontSize: 20, fontWeight: 700, color: "#1a1a1a", fontFamily: "'DM Mono', monospace" }}>{privacyMode ? "•••• €" : fmtAbs(val)}</p>
               </div>
             ))}
           </div>
@@ -460,7 +470,7 @@ export default function App() {
             <span style={{ fontSize: 13, color: "#555", fontWeight: 500 }}>ROI del mes</span>
             <span style={{ fontSize: 22, fontWeight: 700, fontFamily: "'DM Mono', monospace",
               color: monthStats.roi >= 0 ? "#1a7a4a" : "#c0392b" }}>
-              {monthStats.roi >= 0 ? "+" : ""}{monthStats.roi.toFixed(0)}%
+              {privacyMode ? "••%" : `${monthStats.roi >= 0 ? "+" : ""}${monthStats.roi.toFixed(0)}%`}
             </span>
           </div>
 
@@ -492,13 +502,13 @@ export default function App() {
                     <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1a1a1a",
                       whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</p>
                     <p style={{ margin: "2px 0 0", fontSize: 11, color: "#bbb" }}>
-                      Acumulado: <span style={{ color: at.resultado >= 0 ? "#1a7a4a" : "#c0392b", fontWeight: 600 }}>{fmtSigned(at.resultado)}</span>
+                      Acumulado: <span style={{ color: at.resultado >= 0 ? "#1a7a4a" : "#c0392b", fontWeight: 600 }}>{privacyMode ? "•••• €" : fmtSigned(at.resultado)}</span>
                     </p>
                   </div>
                   <div style={{ textAlign: "right", flexShrink: 0 }}>
                     <p style={{ margin: 0, fontSize: 14, fontWeight: 700, fontFamily: "'DM Mono', monospace",
-                      color: ms.resultado >= 0 ? "#1a7a4a" : "#c0392b" }}>{fmtSigned(ms.resultado)}</p>
-                    <p style={{ margin: "2px 0 0", fontSize: 11, color: "#bbb" }}>ROI {ms.roi.toFixed(0)}%</p>
+                      color: ms.resultado >= 0 ? "#1a7a4a" : "#c0392b" }}>{privacyMode ? "•••• €" : fmtSigned(ms.resultado)}</p>
+                    <p style={{ margin: "2px 0 0", fontSize: 11, color: "#bbb" }}>ROI {privacyMode ? "••" : ms.roi.toFixed(0)}%</p>
                   </div>
                 </div>
               </div>
@@ -510,14 +520,14 @@ export default function App() {
             <span style={{ fontSize: 13, color: "#555" }}>Beneficio acumulado (productos)</span>
             <span style={{ fontSize: 13, fontWeight: 700, fontFamily: "'DM Mono', monospace",
               color: products.reduce((a,p) => a + calcStats(movements,p.id).resultado, 0) >= 0 ? "#1a7a4a" : "#c0392b" }}>
-              {fmtSigned(products.reduce((a,p) => a + calcStats(movements,p.id).resultado, 0))}
+              {privacyMode ? "•••••• €" : fmtSigned(products.reduce((a,p) => a + calcStats(movements,p.id).resultado, 0))}
             </span>
           </div>
 
           {/* Últimos movimientos */}
           <h2 style={{ fontSize: 17, fontWeight: 700, margin: "0 0 10px" }}>Últimos movimientos</h2>
           {[...movements].sort((a,b) => b.date.localeCompare(a.date)).slice(0,8).map(m => (
-            <MovementRow key={m.id} m={m} onDelete={deleteMovement} onEdit={openEdit} showProduct products={products} />
+            <MovementRow key={m.id} m={m} onDelete={deleteMovement} onEdit={openEdit} showProduct products={products} privacyMode={privacyMode} />
           ))}
         </div>
       </>)}
@@ -628,7 +638,7 @@ export default function App() {
               <p style={{ fontSize: 36 }}>💸</p><p>Sin gastos registrados</p>
             </div>
           )}
-          {gastosList.map(m => <MovementRow key={m.id} m={m} onDelete={deleteMovement} onEdit={openEdit} products={products} />)}
+          {gastosList.map(m => <MovementRow key={m.id} m={m} onDelete={deleteMovement} onEdit={openEdit} products={products} privacyMode={privacyMode} />)}
         </div>
       )}
 
@@ -729,7 +739,7 @@ export default function App() {
               <p style={{ fontSize: 36 }}>💰</p><p>Sin ventas registradas</p>
             </div>
           )}
-          {ventasList.map(m => <MovementRow key={m.id} m={m} onDelete={deleteMovement} onEdit={openEdit} products={products} />)}
+          {ventasList.map(m => <MovementRow key={m.id} m={m} onDelete={deleteMovement} onEdit={openEdit} products={products} privacyMode={privacyMode} />)}
         </div>
       )}
 
