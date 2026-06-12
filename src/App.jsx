@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-const STORAGE_KEYS = { products: "kdp-products", movements: "kdp-movements" };
+const STORAGE_KEYS = { products: "kdp-products", movements: "kdp-movements", forecasts: "kdp-forecasts" };
 
 // Limpia datos de ejemplo y normaliza productIds
 if (typeof localStorage !== "undefined") {
@@ -234,6 +234,7 @@ const inputStyle = { width: "100%", border: "1.5px solid #e8e8e8", borderRadius:
 export default function App() {
   const [products,  setProducts]  = useStorage(STORAGE_KEYS.products,  defaultProducts);
   const [movements, setMovements] = useStorage(STORAGE_KEYS.movements, defaultMovements);
+  const [forecasts, setForecasts] = useStorage(STORAGE_KEYS.forecasts, []);
   const [tab,       setTab]       = useState("inicio");
   const [activePid, setActivePid] = useState(() => {
     try {
@@ -260,6 +261,37 @@ export default function App() {
   function deleteMovement(id) {
     if (!window.confirm("¿Seguro que quieres borrar este movimiento?")) return;
     setMovements(prev => prev.filter(m => m.id !== id));
+  }
+
+  function deleteForecast(id) {
+    if (!window.confirm("¿Borrar esta previsión?")) return;
+    setForecasts(prev => prev.filter(f => f.id !== id));
+  }
+
+  function saveForecast() {
+    const amt = parseFloat((form.amount || "0").replace(",", "."));
+    if (!amt || !form.devengoMonth) return;
+    setForecasts(prev => [...prev, {
+      id: Date.now(),
+      productId: activePid,
+      devengoMonth: form.devengoMonth,
+      amount: amt,
+      notes: form.notes || "",
+    }]);
+    setModal(null); setForm({});
+  }
+
+  function markAsCollected(forecast) {
+    setForm({
+      concept: activeProduct?.name,
+      amount: String(forecast.amount),
+      units: "1",
+      date: now.toISOString().slice(0,10),
+      devengoMonth: forecast.devengoMonth,
+      notes: forecast.notes,
+      _forecastId: forecast.id,
+    });
+    setModal("collect-venta");
   }
 
   function deleteProduct(pid) {
@@ -618,7 +650,69 @@ export default function App() {
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: 8, margin: "16px 0 14px", alignItems: "center" }}>
+          {/* ── PREVISIONES / PENDIENTES DE COBRO ── */}
+          {(() => {
+            const myForecasts = forecasts.filter(f => f.productId === activePid)
+              .sort((a,b) => a.devengoMonth.localeCompare(b.devengoMonth));
+            const totalPendiente = myForecasts.reduce((a,f) => a + f.amount, 0);
+            return (
+              <div style={{ marginTop: 18, marginBottom: 6 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                  <h3 style={{ fontSize: 14, fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
+                    ⏳ Previsión de regalías
+                  </h3>
+                  <button onClick={() => { setModal("forecast"); setForm({}); }}
+                    style={{ background: "#fff8e1", color: "#b8860b", border: "1.5px solid #f0e0b0", borderRadius: 20,
+                      padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>+ Añadir</button>
+                </div>
+
+                {myForecasts.length === 0 ? (
+                  <div style={{ background: "#fff", borderRadius: 13, padding: "16px", textAlign: "center",
+                    boxShadow: "0 1px 4px rgba(0,0,0,0.05)", border: "1.5px dashed #e8e0cc" }}>
+                    <p style={{ margin: 0, fontSize: 12, color: "#bbb" }}>Sin regalías pendientes de cobro</p>
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ background: "linear-gradient(135deg, #fff8e1, #fef3d9)", borderRadius: 14,
+                      padding: "14px 16px", marginBottom: 10, display: "flex", justifyContent: "space-between", alignItems: "center",
+                      border: "1.5px solid #f5e6bd" }}>
+                      <span style={{ fontSize: 12, color: "#b8860b", fontWeight: 600 }}>💰 Total pendiente de cobro</span>
+                      <span style={{ fontSize: 18, fontWeight: 700, color: "#b8860b", fontFamily: "'DM Mono', monospace" }}>{fmtAbs(totalPendiente)}</span>
+                    </div>
+                    {myForecasts.map(f => (
+                      <div key={f.id} style={{ background: "#fff", borderRadius: 13, padding: "13px 15px", marginBottom: 8,
+                        boxShadow: "0 1px 4px rgba(0,0,0,0.05)", border: "1.5px solid #fdf2d0",
+                        display: "flex", alignItems: "center", gap: 12 }}>
+                        <div style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, background: "#fff8e1",
+                          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17 }}>⏳</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1a1a1a" }}>
+                            Regalías de {MONTHS_ES[parseInt(f.devengoMonth.split("/")[0])-1]} {f.devengoMonth.split("/")[1]}
+                          </p>
+                          {f.notes && <p style={{ margin: "2px 0 0", fontSize: 11, color: "#aaa",
+                            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{f.notes}</p>}
+                        </div>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: "#b8860b", fontFamily: "'DM Mono', monospace", flexShrink: 0 }}>
+                          {fmtAbs(f.amount)}
+                        </span>
+                        <button onClick={() => markAsCollected(f)}
+                          style={{ background: "#1a7a4a", color: "#fff", border: "none", borderRadius: 10,
+                            padding: "8px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap" }}>
+                          ✓ Cobrado
+                        </button>
+                        <button onClick={() => deleteForecast(f.id)}
+                          style={{ background: "none", border: "none", color: "#ddd", fontSize: 15, cursor: "pointer", padding: "0 2px", flexShrink: 0 }}>🗑</button>
+                      </div>
+                    ))}
+                  </>
+                )}
+              </div>
+            );
+          })()}
+
+          <h3 style={{ fontSize: 14, fontWeight: 700, margin: "20px 0 0" }}>Historial de ventas</h3>
+
+          <div style={{ display: "flex", gap: 8, margin: "12px 0 14px", alignItems: "center" }}>
             <div style={{ flex: 1, background: "#fff", borderRadius: 22, padding: "6px 14px",
               fontSize: 13, color: "#888", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
               {filterMonth ? `Filtrando: ${MONTHS_ES[parseInt(filterMonth.split("-")[1])-1]} ${filterMonth.split("-")[0]}` : "Todo El Histórico"}
@@ -950,6 +1044,89 @@ export default function App() {
           }} style={{ width: "100%", background: "#1a7a4a", color: "#fff", border: "none", borderRadius: 14,
             padding: "16px", fontSize: 15, fontWeight: 700, cursor: "pointer", marginTop: 4 }}>
             Guardar venta
+          </button>
+        </Modal>
+        );
+      })()}
+
+      {/* ── MODAL PREVISIÓN DE REGALÍAS ── */}
+      {modal === "forecast" && (
+        <Modal title="⏳ Nueva previsión de regalías" onClose={() => { setModal(null); setForm({}); }}>
+          <Field label="Mes al que pertenecen las regalías">
+            <select value={form.devengoMonth || ""} onChange={e => setF("devengoMonth", e.target.value)} style={inputStyle}>
+              <option value="">Seleccionar mes...</option>
+              {MONTHS_ES.map((m, i) => {
+                const val = `${String(i+1).padStart(2,"0")}/${now.getFullYear()}`;
+                return <option key={i} value={val}>{m} {now.getFullYear()}</option>;
+              })}
+              {MONTHS_ES.map((m, i) => {
+                const y = now.getFullYear() + 1;
+                const val = `${String(i+1).padStart(2,"0")}/${y}`;
+                return <option key={`${i}-next`} value={val}>{m} {y}</option>;
+              })}
+            </select>
+          </Field>
+          <Field label="Importe estimado (€)">
+            <input type="number" step="0.01" placeholder="0,00" value={form.amount || ""}
+              onChange={e => setF("amount", e.target.value)} style={inputStyle} />
+          </Field>
+          <Field label="Notas (opcional)">
+            <textarea placeholder="Ej. Estimación según ventas de Amazon"
+              value={form.notes || ""} onChange={e => setF("notes", e.target.value)}
+              style={{ ...inputStyle, height: 64, resize: "none", lineHeight: 1.5 }} />
+          </Field>
+          <button onClick={saveForecast}
+            style={{ width: "100%", background: "#b8860b", color: "#fff", border: "none", borderRadius: 14,
+              padding: "16px", fontSize: 15, fontWeight: 700, cursor: "pointer", marginTop: 4 }}>
+            Guardar previsión
+          </button>
+        </Modal>
+      )}
+
+      {/* ── MODAL MARCAR COMO COBRADO ── */}
+      {modal === "collect-venta" && (() => {
+        const unitPrice = parseFloat((form.amount || "0").replace(",", ".")) || 0;
+        const units = parseInt(form.units || "1") || 1;
+        const total = unitPrice * units;
+        return (
+        <Modal title="✓ Marcar regalías como cobradas" onClose={() => { setModal(null); setForm({}); }}>
+          <div style={{ background: "#f0f9f4", border: "1.5px solid #cfead9", borderRadius: 12, padding: "12px 14px", marginBottom: 16 }}>
+            <p style={{ margin: 0, fontSize: 12, color: "#1a7a4a" }}>
+              Regalías de <strong>{form.devengoMonth && `${MONTHS_ES[parseInt(form.devengoMonth.split("/")[0])-1]} ${form.devengoMonth.split("/")[1]}`}</strong> — confirma la fecha real de cobro
+            </p>
+          </div>
+          <Field label="Fecha de cobro">
+            <input type="date" value={form.date || ""} onChange={e => setF("date", e.target.value)} style={inputStyle} />
+          </Field>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <Field label="Importe por venta (€)">
+              <input type="number" step="0.01" value={form.amount || ""}
+                onChange={e => setF("amount", e.target.value)} style={inputStyle} />
+            </Field>
+            <Field label="Nº de ventas">
+              <input type="number" min="1" step="1" value={form.units || ""}
+                onChange={e => setF("units", e.target.value)} style={inputStyle} />
+            </Field>
+          </div>
+          <div style={{ background: "#f5f0e8", borderRadius: 12, padding: "12px 16px", display: "flex",
+            justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+            <span style={{ fontSize: 14, color: "#999" }}>Total</span>
+            <span style={{ fontSize: 20, fontWeight: 700, color: "#1a7a4a", fontFamily: "'DM Mono', monospace" }}>
+              {total.toFixed(2).replace(".", ",")} €
+            </span>
+          </div>
+          <button onClick={() => {
+            if (!total) return;
+            setMovements(prev => [...prev, {
+              id: Date.now(), productId: activePid, type: "venta", concept: form.concept || activeProduct?.name,
+              amount: total, units, date: form.date || now.toISOString().slice(0,10),
+              devengoMonth: form.devengoMonth || null, notes: form.notes || null,
+            }]);
+            setForecasts(prev => prev.filter(f => f.id !== form._forecastId));
+            setModal(null); setForm({});
+          }} style={{ width: "100%", background: "#1a7a4a", color: "#fff", border: "none", borderRadius: 14,
+            padding: "16px", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
+            ✓ Confirmar cobro
           </button>
         </Modal>
         );
