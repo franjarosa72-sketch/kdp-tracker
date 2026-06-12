@@ -710,29 +710,32 @@ export default function App() {
                     </div>
                     {myForecasts.map(f => (
                       <div key={f.id} style={{ background: "#fff", borderRadius: 13, padding: "13px 15px", marginBottom: 8,
-                        boxShadow: "0 1px 4px rgba(0,0,0,0.05)", border: "1.5px solid #fdf2d0",
-                        display: "flex", alignItems: "center", gap: 12 }}>
-                        <div style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, background: "#fff8e1",
-                          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17 }}>⏳</div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1a1a1a" }}>
-                            Regalías de {MONTHS_ES[parseInt(f.devengoMonth.split("/")[0])-1]} {f.devengoMonth.split("/")[1]}
-                          </p>
-                          {f.notes && <p style={{ margin: "2px 0 0", fontSize: 11, color: "#aaa",
-                            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{f.notes}</p>}
+                        boxShadow: "0 1px 4px rgba(0,0,0,0.05)", border: "1.5px solid #fdf2d0" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+                          <div style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, background: "#fff8e1",
+                            display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17 }}>⏳</div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1a1a1a" }}>
+                              Regalías de {MONTHS_ES[parseInt(f.devengoMonth.split("/")[0])-1]} {f.devengoMonth.split("/")[1]}
+                            </p>
+                            {f.notes && <p style={{ margin: "2px 0 0", fontSize: 11, color: "#aaa",
+                              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{f.notes}</p>}
+                          </div>
+                          <span style={{ fontSize: 15, fontWeight: 700, color: "#b8860b", fontFamily: "'DM Mono', monospace", flexShrink: 0 }}>
+                            {pAbs(privacyMode, f.amount)}
+                          </span>
                         </div>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: "#b8860b", fontFamily: "'DM Mono', monospace", flexShrink: 0 }}>
-                          {pAbs(privacyMode, f.amount)}
-                        </span>
-                        <button onClick={() => markAsCollected(f)}
-                          style={{ background: "#1a7a4a", color: "#fff", border: "none", borderRadius: 10,
-                            padding: "8px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap" }}>
-                          ✓ Cobrado
-                        </button>
-                        <button onClick={() => openEditForecast(f)}
-                          style={{ background: "none", border: "none", color: "#bbb", fontSize: 15, cursor: "pointer", padding: "0 2px", flexShrink: 0 }}>✏️</button>
-                        <button onClick={() => deleteForecast(f.id)}
-                          style={{ background: "none", border: "none", color: "#ddd", fontSize: 15, cursor: "pointer", padding: "0 2px", flexShrink: 0 }}>🗑</button>
+                        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                          <button onClick={() => openEditForecast(f)}
+                            style={{ background: "#f0f0f0", border: "none", borderRadius: 10, color: "#888", fontSize: 13, cursor: "pointer", padding: "8px 12px" }}>✏️</button>
+                          <button onClick={() => deleteForecast(f.id)}
+                            style={{ background: "#f0f0f0", border: "none", borderRadius: 10, color: "#888", fontSize: 13, cursor: "pointer", padding: "8px 12px" }}>🗑</button>
+                          <button onClick={() => markAsCollected(f)}
+                            style={{ flex: 1, background: "#1a7a4a", color: "#fff", border: "none", borderRadius: 10,
+                              padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
+                            ✓ Marcar como cobrado
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </>
