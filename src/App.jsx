@@ -38,6 +38,9 @@ const MONTHS_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Ago
 
 function fmtAbs(n) { return n.toFixed(2).replace(".", ",") + " €"; }
 function maskAmount(str) { return "•••• €"; }
+function pAbs(privacy, n) { return privacy ? "•••• €" : fmtAbs(n); }
+function pSigned(privacy, n) { return privacy ? "•••• €" : fmtSigned(n); }
+function pPct(privacy, n) { return privacy ? "••%" : n.toFixed(0)+"%"; }
 function fmtSigned(n) { return (n >= 0 ? "+" : "-") + fmtAbs(Math.abs(n)); }
 async function exportToXLSX(data, filename, periodo) {
   // Load SheetJS from CDN
@@ -563,9 +566,9 @@ export default function App() {
                 </div>
                 {/* Totales acumulados */}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 7, marginBottom: 14 }}>
-                  {[["Ingresos", fmtAbs(at.ingresos), "#1a7a4a"],["Gastos", fmtAbs(at.gastos), "#c0392b"],
-                    ["Resultado", fmtSigned(at.resultado), at.resultado>=0?"#1a7a4a":"#c0392b"],
-                    ["ROI", at.roi.toFixed(0)+"%", at.roi>=0?"#1a7a4a":"#c0392b"]].map(([l,v,c]) => (
+                  {[["Ingresos", pAbs(privacyMode, at.ingresos), "#1a7a4a"],["Gastos", pAbs(privacyMode, at.gastos), "#c0392b"],
+                    ["Resultado", pSigned(privacyMode, at.resultado), at.resultado>=0?"#1a7a4a":"#c0392b"],
+                    ["ROI", pPct(privacyMode, at.roi), at.roi>=0?"#1a7a4a":"#c0392b"]].map(([l,v,c]) => (
                     <div key={l} style={{ background: "#f7f5f0", borderRadius: 9, padding: "9px 8px" }}>
                       <p style={{ margin: 0, fontSize: 9, color: "#bbb", fontWeight: 700, textTransform: "uppercase" }}>{l}</p>
                       <p style={{ margin: "4px 0 0", fontSize: 11, fontWeight: 700, color: c, fontFamily: "'DM Mono', monospace" }}>{v}</p>
@@ -582,12 +585,12 @@ export default function App() {
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
                         <span style={{ fontSize: 12, fontWeight: 600, color: "#555" }}>{monthName(ym)}</span>
                         <span style={{ fontSize: 12, fontWeight: 700, fontFamily: "'DM Mono', monospace",
-                          color: ms2.resultado>=0?"#1a7a4a":"#c0392b" }}>{fmtSigned(ms2.resultado)}</span>
+                          color: ms2.resultado>=0?"#1a7a4a":"#c0392b" }}>{pSigned(privacyMode, ms2.resultado)}</span>
                       </div>
                       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 5 }}>
-                        {[["Ventas", fmtAbs(ms2.ingresos), "#1a7a4a"],["Gastos", fmtAbs(ms2.gastos), "#c0392b"],
-                          ["Resultado", fmtSigned(ms2.resultado), ms2.resultado>=0?"#1a7a4a":"#c0392b"],
-                          ["ROI", ms2.roi.toFixed(0)+"%", ms2.roi>=0?"#1a7a4a":"#c0392b"]].map(([l,v,c]) => (
+                        {[["Ventas", pAbs(privacyMode, ms2.ingresos), "#1a7a4a"],["Gastos", pAbs(privacyMode, ms2.gastos), "#c0392b"],
+                          ["Resultado", pSigned(privacyMode, ms2.resultado), ms2.resultado>=0?"#1a7a4a":"#c0392b"],
+                          ["ROI", pPct(privacyMode, ms2.roi), ms2.roi>=0?"#1a7a4a":"#c0392b"]].map(([l,v,c]) => (
                           <div key={l} style={{ background: "#f7f5f0", borderRadius: 7, padding: "6px 6px" }}>
                             <p style={{ margin: 0, fontSize: 8, color: "#bbb", fontWeight: 700, textTransform: "uppercase" }}>{l}</p>
                             <p style={{ margin: "3px 0 0", fontSize: 10, fontWeight: 700, color: c, fontFamily: "'DM Mono', monospace" }}>{v}</p>
@@ -687,7 +690,7 @@ export default function App() {
                       padding: "14px 16px", marginBottom: 10, display: "flex", justifyContent: "space-between", alignItems: "center",
                       border: "1.5px solid #f5e6bd" }}>
                       <span style={{ fontSize: 12, color: "#b8860b", fontWeight: 600 }}>💰 Total pendiente de cobro</span>
-                      <span style={{ fontSize: 18, fontWeight: 700, color: "#b8860b", fontFamily: "'DM Mono', monospace" }}>{fmtAbs(totalPendiente)}</span>
+                      <span style={{ fontSize: 18, fontWeight: 700, color: "#b8860b", fontFamily: "'DM Mono', monospace" }}>{pAbs(privacyMode, totalPendiente)}</span>
                     </div>
                     {myForecasts.map(f => (
                       <div key={f.id} style={{ background: "#fff", borderRadius: 13, padding: "13px 15px", marginBottom: 8,
@@ -703,7 +706,7 @@ export default function App() {
                             whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{f.notes}</p>}
                         </div>
                         <span style={{ fontSize: 14, fontWeight: 700, color: "#b8860b", fontFamily: "'DM Mono', monospace", flexShrink: 0 }}>
-                          {fmtAbs(f.amount)}
+                          {pAbs(privacyMode, f.amount)}
                         </span>
                         <button onClick={() => markAsCollected(f)}
                           style={{ background: "#1a7a4a", color: "#fff", border: "none", borderRadius: 10,
@@ -771,9 +774,9 @@ export default function App() {
               📊 Beneficio del año {informeYear}
             </p>
             <p style={{ margin: 0, fontSize: 34, fontWeight: 700, color: "#fff", fontFamily: "'DM Mono', monospace", letterSpacing: -1 }}>
-              {fmtSigned(yearStats.resultado)}
+              {pSigned(privacyMode, yearStats.resultado)}
             </p>
-            <p style={{ margin: "4px 0 0", fontSize: 12, color: "rgba(255,255,255,0.65)" }}>ROI {yearStats.roi.toFixed(0)}%</p>
+            <p style={{ margin: "4px 0 0", fontSize: 12, color: "rgba(255,255,255,0.65)" }}>ROI {pPct(privacyMode, yearStats.roi)}</p>
           </div>
 
           {/* Ventas / Gastos año */}
@@ -784,7 +787,7 @@ export default function App() {
                   <span style={{ fontSize: 14 }}>{ic}</span>
                   <span style={{ fontSize: 12, color: "#aaa" }}>{lb}</span>
                 </div>
-                <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: c, fontFamily: "'DM Mono', monospace" }}>{fmtAbs(v)}</p>
+                <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: c, fontFamily: "'DM Mono', monospace" }}>{pAbs(privacyMode, v)}</p>
               </div>
             ))}
           </div>
@@ -807,7 +810,7 @@ export default function App() {
                 <span onClick={() => setSelectedMonth(ym)} style={{ fontSize: 13, fontWeight: 600, color: "#1a1a1a", cursor: "pointer", flex: 1 }}>{monthName(ym)}</span>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={{ fontSize: 13, fontWeight: 700, fontFamily: "'DM Mono', monospace",
-                    color: resultado >= 0 ? "#1a7a4a" : "#c0392b" }}>{fmtSigned(resultado)}</span>
+                    color: resultado >= 0 ? "#1a7a4a" : "#c0392b" }}>{pSigned(privacyMode, resultado)}</span>
                   <button onClick={e => { e.stopPropagation(); exportInformesXLSX(movements, activePid, `Informe ${monthName(ym)}`, ym); }}
                     style={{ background: "#f0f0f0", border: "none", borderRadius: 8, padding: "4px 8px", fontSize: 11, cursor: "pointer", color: "#555" }}>📥</button>
                 </div>
@@ -818,7 +821,7 @@ export default function App() {
                 <div style={{ flex: 1, background: "#f0f0f0", borderRadius: 4, height: 7 }}>
                   <div style={{ width: `${(ingresos/maxBar)*100}%`, background: "#1a7a4a", borderRadius: 4, height: 7, transition: "width 0.4s" }} />
                 </div>
-                <span style={{ fontSize: 11, color: "#1a7a4a", fontFamily: "'DM Mono', monospace", width: 70, textAlign: "right", flexShrink: 0 }}>{fmtAbs(ingresos)}</span>
+                <span style={{ fontSize: 11, color: "#1a7a4a", fontFamily: "'DM Mono', monospace", width: 70, textAlign: "right", flexShrink: 0 }}>{pAbs(privacyMode, ingresos)}</span>
               </div>
               {/* Bar: gastos */}
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -826,7 +829,7 @@ export default function App() {
                 <div style={{ flex: 1, background: "#f0f0f0", borderRadius: 4, height: 7 }}>
                   <div style={{ width: `${(gastos/maxBar)*100}%`, background: "#c0392b", borderRadius: 4, height: 7, transition: "width 0.4s" }} />
                 </div>
-                <span style={{ fontSize: 11, color: "#c0392b", fontFamily: "'DM Mono', monospace", width: 70, textAlign: "right", flexShrink: 0 }}>{fmtAbs(gastos)}</span>
+                <span style={{ fontSize: 11, color: "#c0392b", fontFamily: "'DM Mono', monospace", width: 70, textAlign: "right", flexShrink: 0 }}>{pAbs(privacyMode, gastos)}</span>
               </div>
             </div>
           ))}
@@ -847,9 +850,9 @@ export default function App() {
                         whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1 }}>{p.name}</p>
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 7 }}>
-                      {[["Ingresos", fmtAbs(ingresos), "#1a7a4a"],["Gastos", fmtAbs(gastos), "#c0392b"],
-                        ["Resultado", fmtSigned(resultado), resultado>=0?"#1a7a4a":"#c0392b"],
-                        ["ROI", roi.toFixed(0)+"%", roi>=0?"#1a7a4a":"#c0392b"]].map(([l,v,c]) => (
+                      {[["Ingresos", pAbs(privacyMode, ingresos), "#1a7a4a"],["Gastos", pAbs(privacyMode, gastos), "#c0392b"],
+                        ["Resultado", pSigned(privacyMode, resultado), resultado>=0?"#1a7a4a":"#c0392b"],
+                        ["ROI", pPct(privacyMode, roi), roi>=0?"#1a7a4a":"#c0392b"]].map(([l,v,c]) => (
                         <div key={l} style={{ background: "#f7f5f0", borderRadius: 9, padding: "9px 8px" }}>
                           <p style={{ margin: 0, fontSize: 9, color: "#bbb", fontWeight: 700, textTransform: "uppercase" }}>{l}</p>
                           <p style={{ margin: "4px 0 0", fontSize: 12, fontWeight: 700, color: c, fontFamily: "'DM Mono', monospace" }}>{v}</p>
@@ -878,9 +881,9 @@ export default function App() {
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1a1a1a",
                                 whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</p>
-                              <p style={{ margin: 0, fontSize: 11, color: "#bbb" }}>ROI {roi.toFixed(0)}%</p>
+                              <p style={{ margin: 0, fontSize: 11, color: "#bbb" }}>ROI {pPct(privacyMode, roi)}</p>
                             </div>
-                            <span style={{ fontSize: 14, fontWeight: 700, fontFamily: "'DM Mono', monospace", color: "#1a7a4a" }}>{fmtSigned(resultado)}</span>
+                            <span style={{ fontSize: 14, fontWeight: 700, fontFamily: "'DM Mono', monospace", color: "#1a7a4a" }}>{pSigned(privacyMode, resultado)}</span>
                           </div>
                         ))
                       }
@@ -897,9 +900,9 @@ export default function App() {
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1a1a1a",
                                 whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</p>
-                              <p style={{ margin: 0, fontSize: 11, color: "#bbb" }}>ROI {roi.toFixed(0)}%</p>
+                              <p style={{ margin: 0, fontSize: 11, color: "#bbb" }}>ROI {pPct(privacyMode, roi)}</p>
                             </div>
-                            <span style={{ fontSize: 14, fontWeight: 700, fontFamily: "'DM Mono', monospace", color: "#c0392b" }}>{fmtSigned(resultado)}</span>
+                            <span style={{ fontSize: 14, fontWeight: 700, fontFamily: "'DM Mono', monospace", color: "#c0392b" }}>{pSigned(privacyMode, resultado)}</span>
                           </div>
                         ))}
                       </div>
@@ -932,7 +935,7 @@ export default function App() {
               </div>
               {/* Stats resumen */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16 }}>
-                {[["Ventas", fmtAbs(s.ingresos), "#1a7a4a"],["Gastos", fmtAbs(s.gastos), "#c0392b"],["ROI", s.roi.toFixed(0)+"%", s.roi>=0?"#1a7a4a":"#c0392b"]].map(([l,v,c]) => (
+                {[["Ventas", pAbs(privacyMode, s.ingresos), "#1a7a4a"],["Gastos", pAbs(privacyMode, s.gastos), "#c0392b"],["ROI", pPct(privacyMode, s.roi), s.roi>=0?"#1a7a4a":"#c0392b"]].map(([l,v,c]) => (
                   <div key={l} style={{ background: "#fff", borderRadius: 11, padding: "10px 12px", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
                     <p style={{ margin: 0, fontSize: 10, color: "#bbb", fontWeight: 700, textTransform: "uppercase" }}>{l}</p>
                     <p style={{ margin: "4px 0 0", fontSize: 14, fontWeight: 700, color: c, fontFamily: "'DM Mono', monospace" }}>{v}</p>
@@ -942,7 +945,7 @@ export default function App() {
               {/* Resultado */}
               <div style={{ background: s.resultado>=0?"#1a7a4a":"#c0392b", borderRadius: 13, padding: "12px 16px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontSize: 13, color: "rgba(255,255,255,0.8)" }}>Resultado</span>
-                <span style={{ fontSize: 20, fontWeight: 700, color: "#fff", fontFamily: "'DM Mono', monospace" }}>{fmtSigned(s.resultado)}</span>
+                <span style={{ fontSize: 20, fontWeight: 700, color: "#fff", fontFamily: "'DM Mono', monospace" }}>{pSigned(privacyMode, s.resultado)}</span>
               </div>
               {/* Movimientos */}
               <h4 style={{ fontSize: 13, fontWeight: 700, color: "#888", textTransform: "uppercase", letterSpacing: 0.5, margin: "0 0 10px" }}>Movimientos</h4>
@@ -962,7 +965,7 @@ export default function App() {
                   </div>
                   <span style={{ fontSize: 14, fontWeight: 700, fontFamily: "'DM Mono', monospace",
                     color: m.type === "venta" ? "#1a7a4a" : "#c0392b", flexShrink: 0 }}>
-                    {m.type === "venta" ? "+" : "-"}{fmtAbs(m.amount)}
+                    {privacyMode ? "•••• €" : `${m.type === "venta" ? "+" : "-"}${fmtAbs(m.amount)}`}
                   </span>
                 </div>
               ))}
