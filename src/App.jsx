@@ -446,7 +446,7 @@ export default function App() {
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{ margin: 0, fontSize: 10, color: "#bbb", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>Producto activo</p>
               <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1a1a1a",
-                whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{activeProduct?.name}</p>
+                wordBreak: "break-word" }}>{activeProduct?.name}</p>
             </div>
             <select value={activePid} onChange={e => setActivePid(Number(e.target.value))}
               style={{ border: "none", background: "transparent", fontSize: 16, cursor: "pointer", outline: "none", flexShrink: 0, maxWidth: 28 }}>
@@ -505,6 +505,38 @@ export default function App() {
             </button>
           </div>
 
+          {/* ── RESUMEN GLOBAL ── */}
+          {products.length > 0 && (() => {
+            const gMonth = calcStats(movements, null, currentMonth, true);
+            const gYear  = calcStats(movements, null, String(now.getFullYear()), true);
+            const gAll   = calcStats(movements, null, null, true);
+            const periods = [
+              { label: "Este mes", stats: gMonth },
+              { label: String(now.getFullYear()), stats: gYear },
+              { label: "Total", stats: gAll },
+            ];
+            return (
+              <div style={{ marginBottom: 20 }}>
+                <h2 style={{ fontSize: 17, fontWeight: 700, margin: "0 0 10px" }}>Resumen global 📚</h2>
+                <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+                  {periods.map(({ label, stats }) => (
+                    <div key={label} style={{ flex: 1, background: "#fff", borderRadius: 13, padding: "12px 10px",
+                      boxShadow: "0 1px 4px rgba(0,0,0,0.06)", textAlign: "center" }}>
+                      <p style={{ margin: "0 0 6px", fontSize: 10, color: "#bbb", fontWeight: 700, textTransform: "uppercase" }}>{label}</p>
+                      <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 700, fontFamily: "'DM Mono', monospace",
+                        color: stats.resultado >= 0 ? "#1a7a4a" : "#c0392b" }}>
+                        {pSigned(privacyMode, stats.resultado)}
+                      </p>
+                      <p style={{ margin: 0, fontSize: 10, color: "#aaa" }}>
+                        ↑ {pAbs(privacyMode, stats.ingresos)} · ↓ {pAbs(privacyMode, stats.gastos)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Productos */}
           <h2 style={{ fontSize: 17, fontWeight: 700, margin: "0 0 10px" }}>Tus productos</h2>
           {products.map(p => {
@@ -519,7 +551,7 @@ export default function App() {
                     display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{p.emoji}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1a1a1a",
-                      whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</p>
+                      wordBreak: "break-word" }}>{p.name}</p>
                     <p style={{ margin: "2px 0 0", fontSize: 11, color: "#bbb" }}>
                       Acumulado: <span style={{ color: at.resultado >= 0 ? "#1a7a4a" : "#c0392b", fontWeight: 600 }}>{privacyMode ? "•••• €" : fmtSigned(at.resultado)}</span>
                     </p>
@@ -868,7 +900,7 @@ export default function App() {
                       <div style={{ width: 34, height: 34, borderRadius: 9, background: p.color,
                         display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17 }}>{p.emoji}</div>
                       <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1a1a1a",
-                        whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1 }}>{p.name}</p>
+                        wordBreak: "break-word", flex: 1 }}>{p.name}</p>
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 7 }}>
                       {[["Ingresos", pAbs(privacyMode, ingresos), "#1a7a4a"],["Gastos", pAbs(privacyMode, gastos), "#c0392b"],
