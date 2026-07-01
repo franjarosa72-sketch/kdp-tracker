@@ -253,6 +253,7 @@ export default function App() {
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [filterMonth, setFilterMonth] = useState("");
   const [privacyMode, setPrivacyMode] = useState(false);
+  const [globalPeriod, setGlobalPeriod] = useState("mes");
   const [filterType, setFilterType] = useState("all"); // gastos/ventas filter
   const [informeYear, setInformeYear] = useState(new Date().getFullYear());
 
@@ -278,12 +279,12 @@ export default function App() {
     if (!amt || !form.devengoMonth) return;
     if (form._editingForecastId) {
       setForecasts(prev => prev.map(f => f.id === form._editingForecastId ? {
-        ...f, devengoMonth: form.devengoMonth, amount: amt, notes: form.notes || ""
+        ...f, productId: form.forecastProductId || f.productId, devengoMonth: form.devengoMonth, amount: amt, notes: form.notes || ""
       } : f));
     } else {
       setForecasts(prev => [...prev, {
         id: Date.now(),
-        productId: activePid,
+        productId: form.forecastProductId || activePid,
         devengoMonth: form.devengoMonth,
         amount: amt,
         notes: form.notes || "",
@@ -294,6 +295,7 @@ export default function App() {
 
   function openEditForecast(f) {
     setForm({
+      forecastProductId: f.productId,
       devengoMonth: f.devengoMonth,
       amount: String(f.amount),
       notes: f.notes || "",
@@ -507,31 +509,63 @@ export default function App() {
 
           {/* ── RESUMEN GLOBAL ── */}
           {products.length > 0 && (() => {
-            const gMonth = calcStats(movements, null, currentMonth, true);
-            const gYear  = calcStats(movements, null, String(now.getFullYear()), true);
-            const gAll   = calcStats(movements, null, null, true);
-            const periods = [
-              { label: "Este mes", stats: gMonth },
-              { label: String(now.getFullYear()), stats: gYear },
-              { label: "Total", stats: gAll },
-            ];
+            const prefix = globalPeriod === "mes" ? currentMonth : globalPeriod === "año" ? String(now.getFullYear()) : null;
+            const gStats = calcStats(movements, null, prefix, true);
             return (
               <div style={{ marginBottom: 20 }}>
                 <h2 style={{ fontSize: 17, fontWeight: 700, margin: "0 0 10px" }}>Resumen global 📚</h2>
+
+                {/* Selector periodo */}
                 <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
-                  {periods.map(({ label, stats }) => (
-                    <div key={label} style={{ flex: 1, background: "#fff", borderRadius: 13, padding: "12px 10px",
-                      boxShadow: "0 1px 4px rgba(0,0,0,0.06)", textAlign: "center" }}>
-                      <p style={{ margin: "0 0 6px", fontSize: 10, color: "#bbb", fontWeight: 700, textTransform: "uppercase" }}>{label}</p>
-                      <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 700, fontFamily: "'DM Mono', monospace",
-                        color: stats.resultado >= 0 ? "#1a7a4a" : "#c0392b" }}>
-                        {pSigned(privacyMode, stats.resultado)}
-                      </p>
-                      <p style={{ margin: 0, fontSize: 10, color: "#aaa" }}>
-                        ↑ {pAbs(privacyMode, stats.ingresos)} · ↓ {pAbs(privacyMode, stats.gastos)}
-                      </p>
-                    </div>
+                  {[["mes","Este mes"],["año", String(now.getFullYear())],["total","Total"]].map(([id,lb]) => (
+                    <button key={id} onClick={() => setGlobalPeriod(id)}
+                      style={{ flex: 1, background: globalPeriod === id ? "#1a1a1a" : "#fff",
+                        color: globalPeriod === id ? "#fff" : "#555", border: "none", borderRadius: 10,
+                        padding: "8px 4px", fontSize: 12, fontWeight: 600, cursor: "pointer",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+                      {lb}
+                    </button>
                   ))}
+                </div>
+
+                {/* Tarjeta global */}
+                <div style={{ background: "#fff", borderRadius: 16, padding: "16px", marginBottom: 4, boxShadow: "0 1px 6px rgba(0,0,0,0.07)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <span style={{ fontSize: 13, color: "#555", fontWeight: 500 }}>Resultado combinado</span>
+                    <span style={{ fontSize: 20, fontWeight: 700, fontFamily: "'DM Mono', monospace",
+                      color: gStats.resultado >= 0 ? "#1a7a4a" : "#c0392b" }}>
+                      {pSigned(privacyMode, gStats.resultado)}
+                    </span>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
+                    {[["↑ Ingresos", gStats.ingresos, "#1a7a4a"],["↓ Gastos", gStats.gastos, "#c0392b"]].map(([lb,v,c]) => (
+                      <div key={lb} style={{ background: "#f7f5f0", borderRadius: 10, padding: "10px 12px" }}>
+                        <p style={{ margin: 0, fontSize: 11, color: "#aaa" }}>{lb}</p>
+                        <p style={{ margin: "3px 0 0", fontSize: 14, fontWeight: 700, color: c, fontFamily: "'DM Mono', monospace" }}>{pAbs(privacyMode, v)}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Desglose por libro */}
+                  <div style={{ borderTop: "1px solid #f0f0f0", paddingTop: 12 }}>
+                    <p style={{ margin: "0 0 10px", fontSize: 11, fontWeight: 700, color: "#bbb", textTransform: "uppercase", letterSpacing: 0.5 }}>
+                      Ingresos por libro
+                    </p>
+                    {products.map((p, i) => {
+                      const bs = calcStats(movements, p.id, prefix);
+                      return (
+                        <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: i < products.length-1 ? 10 : 0 }}>
+                          <div style={{ width: 30, height: 30, borderRadius: 8, background: p.color, flexShrink: 0,
+                            display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>{p.emoji}</div>
+                          <p style={{ margin: 0, fontSize: 12, color: "#555", flex: 1, minWidth: 0,
+                            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</p>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: "#1a7a4a", fontFamily: "'DM Mono', monospace", flexShrink: 0 }}>
+                            {pAbs(privacyMode, bs.ingresos)}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             );
@@ -713,61 +747,93 @@ export default function App() {
 
           {/* ── PREVISIONES / PENDIENTES DE COBRO ── */}
           {(() => {
-            const myForecasts = forecasts.filter(f => f.productId === activePid)
-              .sort((a,b) => a.devengoMonth.localeCompare(b.devengoMonth));
-            const totalPendiente = myForecasts.reduce((a,f) => a + f.amount, 0);
+            const allForecasts = forecasts.sort((a,b) => a.devengoMonth.localeCompare(b.devengoMonth));
+            const totalPendiente = allForecasts.reduce((a,f) => a + f.amount, 0);
             return (
               <div style={{ marginTop: 18, marginBottom: 6 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                  <h3 style={{ fontSize: 14, fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
-                    ⏳ Previsión de regalías
-                  </h3>
+                  <h3 style={{ fontSize: 14, fontWeight: 700, margin: 0 }}>⏳ Previsión de regalías</h3>
                   <button onClick={() => { setModal("forecast"); setForm({}); }}
                     style={{ background: "#fff8e1", color: "#b8860b", border: "1.5px solid #f0e0b0", borderRadius: 20,
                       padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>+ Añadir</button>
                 </div>
 
-                {myForecasts.length === 0 ? (
+                {allForecasts.length === 0 ? (
                   <div style={{ background: "#fff", borderRadius: 13, padding: "16px", textAlign: "center",
                     boxShadow: "0 1px 4px rgba(0,0,0,0.05)", border: "1.5px dashed #e8e0cc" }}>
                     <p style={{ margin: 0, fontSize: 12, color: "#bbb" }}>Sin regalías pendientes de cobro</p>
                   </div>
                 ) : (
                   <>
+                    {/* Total global pendiente */}
                     <div style={{ background: "linear-gradient(135deg, #fff8e1, #fef3d9)", borderRadius: 14,
-                      padding: "14px 16px", marginBottom: 10, display: "flex", justifyContent: "space-between", alignItems: "center",
+                      padding: "14px 16px", marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center",
                       border: "1.5px solid #f5e6bd" }}>
                       <span style={{ fontSize: 12, color: "#b8860b", fontWeight: 600 }}>💰 Total pendiente de cobro</span>
                       <span style={{ fontSize: 18, fontWeight: 700, color: "#b8860b", fontFamily: "'DM Mono', monospace" }}>{pAbs(privacyMode, totalPendiente)}</span>
                     </div>
-                    {myForecasts.map(f => (
-                      <div key={f.id} style={{ background: "#fff", borderRadius: 13, padding: "13px 15px", marginBottom: 8,
-                        boxShadow: "0 1px 4px rgba(0,0,0,0.05)", border: "1.5px solid #fdf2d0" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
-                          <div style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, background: "#fff8e1",
-                            display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17 }}>⏳</div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1a1a1a" }}>
-                              Regalías de {MONTHS_ES[parseInt(f.devengoMonth.split("/")[0])-1]} {f.devengoMonth.split("/")[1]}
-                            </p>
-                            {f.notes && <p style={{ margin: "2px 0 0", fontSize: 11, color: "#aaa",
-                              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{f.notes}</p>}
+
+                    {/* Agrupado por libro */}
+                    {products.map(p => {
+                      const pForecasts = allForecasts.filter(f => f.productId === p.id);
+                      if (pForecasts.length === 0) return null;
+                      const pTotal = pForecasts.reduce((a,f) => a + f.amount, 0);
+                      return (
+                        <div key={p.id} style={{ marginBottom: 14 }}>
+                          {/* Cabecera libro */}
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                            <div style={{ width: 26, height: 26, borderRadius: 7, background: p.color, flexShrink: 0,
+                              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13 }}>{p.emoji}</div>
+                            <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: "#555", flex: 1,
+                              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</p>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: "#b8860b", fontFamily: "'DM Mono', monospace", flexShrink: 0 }}>
+                              {pAbs(privacyMode, pTotal)}
+                            </span>
                           </div>
-                          <span style={{ fontSize: 15, fontWeight: 700, color: "#b8860b", fontFamily: "'DM Mono', monospace", flexShrink: 0 }}>
-                            {pAbs(privacyMode, f.amount)}
-                          </span>
+
+                          {pForecasts.map(f => (
+                            <div key={f.id} style={{ background: "#fff", borderRadius: 13, padding: "13px 15px", marginBottom: 8,
+                              boxShadow: "0 1px 4px rgba(0,0,0,0.05)", border: "1.5px solid #fdf2d0" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+                                <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, background: "#fff8e1",
+                                  display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>⏳</div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1a1a1a" }}>
+                                    Regalías de {MONTHS_ES[parseInt(f.devengoMonth.split("/")[0])-1]} {f.devengoMonth.split("/")[1]}
+                                  </p>
+                                  {f.notes && <p style={{ margin: "2px 0 0", fontSize: 11, color: "#aaa",
+                                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.notes}</p>}
+                                </div>
+                                <span style={{ fontSize: 15, fontWeight: 700, color: "#b8860b", fontFamily: "'DM Mono', monospace", flexShrink: 0 }}>
+                                  {pAbs(privacyMode, f.amount)}
+                                </span>
+                              </div>
+                              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                                <button onClick={() => openEditForecast(f)}
+                                  style={{ background: "#f0f0f0", border: "none", borderRadius: 10, color: "#888", fontSize: 13, cursor: "pointer", padding: "8px 12px" }}>✏️</button>
+                                <button onClick={() => deleteForecast(f.id)}
+                                  style={{ background: "#f0f0f0", border: "none", borderRadius: 10, color: "#888", fontSize: 13, cursor: "pointer", padding: "8px 12px" }}>🗑</button>
+                                <button onClick={() => markAsCollected(f)}
+                                  style={{ flex: 1, background: "#1a7a4a", color: "#fff", border: "none", borderRadius: 10,
+                                    padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
+                                  ✓ Cobrado
+                                </button>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                          <button onClick={() => openEditForecast(f)}
-                            style={{ background: "#f0f0f0", border: "none", borderRadius: 10, color: "#888", fontSize: 13, cursor: "pointer", padding: "8px 12px" }}>✏️</button>
-                          <button onClick={() => deleteForecast(f.id)}
-                            style={{ background: "#f0f0f0", border: "none", borderRadius: 10, color: "#888", fontSize: 13, cursor: "pointer", padding: "8px 12px" }}>🗑</button>
-                          <button onClick={() => markAsCollected(f)}
-                            style={{ flex: 1, background: "#1a7a4a", color: "#fff", border: "none", borderRadius: 10,
-                              padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
-                            ✓ Marcar como cobrado
-                          </button>
-                        </div>
+                      );
+                    })}
+
+                    {/* Libros sin previsión */}
+                    {products.filter(p => allForecasts.filter(f => f.productId === p.id).length === 0).map(p => (
+                      <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8,
+                        background: "#fff", borderRadius: 12, padding: "10px 14px", border: "1.5px dashed #f0ece0" }}>
+                        <div style={{ width: 26, height: 26, borderRadius: 7, background: p.color, flexShrink: 0,
+                          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13 }}>{p.emoji}</div>
+                        <p style={{ margin: 0, fontSize: 12, color: "#bbb", flex: 1,
+                          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</p>
+                        <span style={{ fontSize: 11, color: "#ccc" }}>Sin previsión</span>
                       </div>
                     ))}
                   </>
@@ -1118,6 +1184,11 @@ export default function App() {
       {/* ── MODAL PREVISIÓN DE REGALÍAS ── */}
       {modal === "forecast" && (
         <Modal title={form._editingForecastId ? "✏️ Editar previsión" : "⏳ Nueva previsión de regalías"} onClose={() => { setModal(null); setForm({}); }}>
+          <Field label="Libro">
+            <select value={form.forecastProductId || activePid} onChange={e => setF("forecastProductId", Number(e.target.value))} style={inputStyle}>
+              {products.map(p => <option key={p.id} value={p.id}>{p.emoji} {p.name}</option>)}
+            </select>
+          </Field>
           <Field label="Mes al que pertenecen las regalías">
             <select value={form.devengoMonth || ""} onChange={e => setF("devengoMonth", e.target.value)} style={inputStyle}>
               <option value="">Seleccionar mes...</option>
