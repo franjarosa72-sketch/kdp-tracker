@@ -189,9 +189,15 @@ function MovementRow({ m, onDelete, onEdit, showProduct, products, privacyMode }
         <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1a1a1a",
           whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.concept}</p>
         <p style={{ margin: "2px 0 0", fontSize: 11, color: "#aaa" }}>
-          {showProduct ? prod?.name?.slice(0,16)+"... · " : "Compras · "}{m.date}
+          {m.date}
           {m.devengoMonth && <span style={{ marginLeft: 5, background: "#fff8e1", color: "#b8860b", borderRadius: 4, padding: "1px 5px", fontWeight: 600 }}>📅 {m.devengoMonth}</span>}
         </p>
+        {!showProduct && prod && (
+          <p style={{ margin: "2px 0 0", fontSize: 10, color: "#bbb", display: "flex", alignItems: "center", gap: 4 }}>
+            <span>{prod.emoji}</span>
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{prod.name}</span>
+          </p>
+        )}
       </div>
       <span style={{ fontSize: 14, fontWeight: 700, fontFamily: "'DM Mono', monospace", whiteSpace: "nowrap",
         color: m.type === "venta" ? "#1a7a4a" : "#c0392b" }}>
