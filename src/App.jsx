@@ -192,7 +192,7 @@ function MovementRow({ m, onDelete, onEdit, showProduct, products, privacyMode }
           {m.date}
           {m.devengoMonth && <span style={{ marginLeft: 5, background: "#fff8e1", color: "#b8860b", borderRadius: 4, padding: "1px 5px", fontWeight: 600 }}>📅 {m.devengoMonth}</span>}
         </p>
-        {!showProduct && prod && (
+        {prod && (
           <p style={{ margin: "2px 0 0", fontSize: 10, color: "#bbb", display: "flex", alignItems: "center", gap: 4 }}>
             <span>{prod.emoji}</span>
             <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{prod.name}</span>
