@@ -111,7 +111,7 @@ async function exportInformesXLSX(movements, activePid, periodo, prefix) {
   const XLSX = window.XLSX;
   const wb = XLSX.utils.book_new();
 
-  const mvs = movements.filter(m => m.productId === activePid && m.date.startsWith(prefix));
+  const mvs = movements.filter(m => (activePid === null || m.productId === activePid) && m.date.startsWith(prefix));
   const ventas = mvs.filter(m => m.type === "venta");
   const gastos = mvs.filter(m => m.type === "gasto");
   const totalVentas = ventas.reduce((a,m) => a + m.amount, 0);
@@ -283,6 +283,7 @@ export default function App() {
   const [filterVentaType, setFilterVentaType] = useState("all");
   const [privacyMode, setPrivacyMode] = useState(false);
   const [globalPeriod, setGlobalPeriod] = useState("mes");
+  const [informePid, setInformePid] = useState(null); // null = todos
   const [filterType, setFilterType] = useState("all"); // gastos/ventas filter
   const [informeYear, setInformeYear] = useState(new Date().getFullYear());
 
@@ -435,7 +436,7 @@ export default function App() {
   const maxBar = Math.max(...monthsInYear.map(m => Math.max(m.ingresos, m.gastos)), 1);
 
   // product rankings all time
-  const rankings = [...products].map(p => ({ p, ...calcStats(movements, p.id) })).sort((a,b) => b.resultado - a.resultado);
+  const rankings = [...products].map(p => ({ p, ...calcStats(movements, p.id, yearPrefix) })).sort((a,b) => b.resultado - a.resultado);
 
   // ── FILTERED lists for gastos/ventas tabs
   const allMovSorted = [...movements].sort((a,b) => b.date.localeCompare(a.date));
@@ -922,6 +923,28 @@ export default function App() {
             </div>
           </div>
 
+          {/* Product selector for informes */}
+          {products.length > 1 && (
+            <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+              <button onClick={() => setInformePid(null)}
+                style={{ flex: 1, background: informePid === null ? "#1a1a1a" : "#fff",
+                  color: informePid === null ? "#fff" : "#555", border: "none", borderRadius: 10,
+                  padding: "8px 6px", fontSize: 11, fontWeight: 600, cursor: "pointer",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+                📚 Todos
+              </button>
+              {products.map(p => (
+                <button key={p.id} onClick={() => setInformePid(p.id)}
+                  style={{ flex: 1, background: informePid === p.id ? "#1a1a1a" : "#fff",
+                    color: informePid === p.id ? "#fff" : "#555", border: "none", borderRadius: 10,
+                    padding: "8px 6px", fontSize: 11, fontWeight: 600, cursor: "pointer",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.06)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {p.emoji}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Year selector */}
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
             <span style={{ fontSize: 13, color: "#555", fontWeight: 500 }}>Ejercicio fiscal</span>
@@ -947,7 +970,7 @@ export default function App() {
 
           {/* Ventas / Gastos año */}
           {(() => {
-            const mvYear = movements.filter(m => m.productId === activePid && m.date.startsWith(yearPrefix));
+            const mvYear = movements.filter(m => (informePid === null || m.productId === informePidActive) && m.date.startsWith(yearPrefix));
             const ventasKdp = mvYear.filter(m => m.type === "venta" && (m.ventaType === "kdp" || !m.ventaType)).reduce((a,m) => a + m.amount, 0);
             const ventasOtros = mvYear.filter(m => m.type === "venta" && m.ventaType === "otros").reduce((a,m) => a + m.amount, 0);
             return (
@@ -978,7 +1001,7 @@ export default function App() {
 
           {/* Exportar informe */}
           <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-            <button onClick={() => exportInformesXLSX(movements, activePid, `Informe anual ${informeYear}`, String(informeYear))}
+            <button onClick={() => exportInformesXLSX(movements, informePid === null ? null : informePidActive, `Informe anual ${informeYear}`, String(informeYear))}
               style={{ flex: 1, background: "#1a1a1a", color: "#fff", border: "none", borderRadius: 12,
                 padding: "11px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
               📥 Excel año {informeYear}
