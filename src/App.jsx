@@ -190,10 +190,12 @@ function MovementRow({ m, onDelete, onEdit, onToggleType, showProduct, products,
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1a1a1a",
             whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.concept}</p>
-          <p style={{ margin: "2px 0 0", fontSize: 11, color: "#aaa", whiteSpace: "nowrap" }}>
-            {m.date}
-            {m.devengoMonth && <span style={{ marginLeft: 5, background: "#fff8e1", color: "#b8860b", borderRadius: 4, padding: "1px 5px", fontWeight: 600 }}>📅 {m.devengoMonth}</span>}
-          </p>
+          <p style={{ margin: "2px 0 0", fontSize: 11, color: "#aaa", whiteSpace: "nowrap" }}>{m.date}</p>
+          {m.devengoMonth && (
+            <p style={{ margin: "2px 0 0" }}>
+              <span style={{ background: "#fff8e1", color: "#b8860b", borderRadius: 4, padding: "1px 5px", fontWeight: 600, fontSize: 10 }}>📅 {m.devengoMonth}</span>
+            </p>
+          )}
           {prod && (
             <p style={{ margin: "2px 0 0", fontSize: 10, color: "#bbb", display: "flex", alignItems: "center", gap: 4 }}>
               <span>{prod.emoji}</span>
