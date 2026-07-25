@@ -924,26 +924,18 @@ export default function App() {
           </div>
 
           {/* Product selector for informes */}
-          {products.length > 1 && (
-            <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
-              <button onClick={() => setInformePid(null)}
-                style={{ flex: 1, background: informePid === null ? "#1a1a1a" : "#fff",
-                  color: informePid === null ? "#fff" : "#555", border: "none", borderRadius: 10,
-                  padding: "8px 6px", fontSize: 11, fontWeight: 600, cursor: "pointer",
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
-                📚 Todos
-              </button>
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ fontSize: 11, color: "#aaa", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, display: "block", marginBottom: 5 }}>Ver datos de</label>
+            <select value={informePid === null ? "todos" : String(informePid)}
+              onChange={e => setInformePid(e.target.value === "todos" ? null : Number(e.target.value))}
+              style={{ width: "100%", border: "1.5px solid #e8e8e8", borderRadius: 11, padding: "10px 13px",
+                fontSize: 14, outline: "none", background: "#fff", fontFamily: "inherit", cursor: "pointer" }}>
+              <option value="todos">📚 Todos los libros</option>
               {products.map(p => (
-                <button key={p.id} onClick={() => setInformePid(p.id)}
-                  style={{ flex: 1, background: informePid === p.id ? "#1a1a1a" : "#fff",
-                    color: informePid === p.id ? "#fff" : "#555", border: "none", borderRadius: 10,
-                    padding: "8px 6px", fontSize: 11, fontWeight: 600, cursor: "pointer",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.06)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {p.emoji}
-                </button>
+                <option key={p.id} value={String(p.id)}>{p.emoji} {p.name}</option>
               ))}
-            </div>
-          )}
+            </select>
+          </div>
 
           {/* Year selector */}
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
