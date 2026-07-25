@@ -196,6 +196,12 @@ function MovementRow({ m, onDelete, onEdit, showProduct, products, privacyMode }
           <p style={{ margin: "2px 0 0", fontSize: 10, color: "#bbb", display: "flex", alignItems: "center", gap: 4 }}>
             <span>{prod.emoji}</span>
             <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{prod.name}</span>
+            {m.type === "venta" && m.ventaType === "otros" && (
+              <span style={{ marginLeft: 4, background: "#f0f4ff", color: "#5566aa", borderRadius: 4, padding: "1px 5px", fontWeight: 600, fontSize: 9, flexShrink: 0 }}>Otros</span>
+            )}
+            {m.type === "venta" && (m.ventaType === "kdp" || !m.ventaType) && (
+              <span style={{ marginLeft: 4, background: "#e8f5e9", color: "#1a7a4a", borderRadius: 4, padding: "1px 5px", fontWeight: 600, fontSize: 9, flexShrink: 0 }}>KDP</span>
+            )}
           </p>
         )}
       </div>
@@ -258,6 +264,7 @@ export default function App() {
   const [editingId, setEditingId] = useState(null);
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [filterMonth, setFilterMonth] = useState("");
+  const [filterVentaType, setFilterVentaType] = useState("all");
   const [privacyMode, setPrivacyMode] = useState(false);
   const [globalPeriod, setGlobalPeriod] = useState("mes");
   const [filterType, setFilterType] = useState("all"); // gastos/ventas filter
@@ -410,7 +417,7 @@ export default function App() {
   // ── FILTERED lists for gastos/ventas tabs
   const allMovSorted = [...movements].sort((a,b) => b.date.localeCompare(a.date));
   const gastosList = allMovSorted.filter(m => m.productId === activePid && m.type === "gasto" && (!filterMonth || m.date.startsWith(filterMonth)));
-  const ventasList = allMovSorted.filter(m => m.productId === activePid && m.type === "venta" && (!filterMonth || m.date.startsWith(filterMonth)));
+  const ventasList = allMovSorted.filter(m => m.productId === activePid && m.type === "venta" && (!filterMonth || m.date.startsWith(filterMonth)) && (filterVentaType === "all" || m.ventaType === filterVentaType || (!m.ventaType && filterVentaType === "kdp")));
 
   const resultado = monthStats.resultado;
   const isPos = resultado >= 0;
@@ -848,7 +855,18 @@ export default function App() {
             );
           })()}
 
-          <h3 style={{ fontSize: 14, fontWeight: 700, margin: "20px 0 0" }}>Historial de ventas</h3>
+          <h3 style={{ fontSize: 14, fontWeight: 700, margin: "20px 0 8px" }}>Historial de ventas</h3>
+          <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+            {[["all","Todo"],["kdp","📦 KDP"],["otros","💡 Otros"]].map(([id,lb]) => (
+              <button key={id} onClick={() => setFilterVentaType(id)}
+                style={{ flex: 1, background: filterVentaType === id ? "#1a1a1a" : "#fff",
+                  color: filterVentaType === id ? "#fff" : "#555",
+                  border: "none", borderRadius: 10, padding: "8px 4px", fontSize: 12, fontWeight: 600, cursor: "pointer",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+                {lb}
+              </button>
+            ))}
+          </div>
 
           <div style={{ display: "flex", gap: 8, margin: "12px 0 14px", alignItems: "center" }}>
             <div style={{ flex: 1, background: "#fff", borderRadius: 22, padding: "6px 14px",
@@ -1123,6 +1141,18 @@ export default function App() {
         <Modal title="Nueva venta" onClose={() => { setModal(null); setForm({}); }}>
           <Field label="Fecha de cobro">
             <input type="date" value={form.date || ""} onChange={e => setF("date", e.target.value)} style={inputStyle} />
+          </Field>
+          <Field label="Tipo de venta">
+            <div style={{ display: "flex", gap: 8 }}>
+              {[["kdp","📦 Regalías KDP"],["otros","💡 Otros"]].map(([id,lb]) => (
+                <button key={id} onClick={() => setF("ventaType", id)}
+                  style={{ flex: 1, background: (form.ventaType || "kdp") === id ? "#1a1a1a" : "#f0f0f0",
+                    color: (form.ventaType || "kdp") === id ? "#fff" : "#555",
+                    border: "none", borderRadius: 10, padding: "10px 8px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                  {lb}
+                </button>
+              ))}
+            </div>
           </Field>
           <Field label="Producto">
             <select value={form.concept || activeProduct?.name} onChange={e => setF("concept", e.target.value)} style={inputStyle}>
