@@ -175,7 +175,7 @@ function calcStats(movements, pid, prefix, ignorePid = false) {
 
 // ── COMPONENTS ──────────────────────────────────────────────────────────────
 
-function MovementRow({ m, onDelete, onEdit, showProduct, products, privacyMode }) {
+function MovementRow({ m, onDelete, onEdit, onToggleType, showProduct, products, privacyMode }) {
   const prod = products.find(p => p.id === m.productId);
   return (
     <div style={{ background: "#fff", borderRadius: 14, padding: "13px 16px", marginBottom: 8,
@@ -209,6 +209,15 @@ function MovementRow({ m, onDelete, onEdit, showProduct, products, privacyMode }
         color: m.type === "venta" ? "#1a7a4a" : "#c0392b" }}>
         {privacyMode ? "•••• €" : `${m.type === "venta" ? "+" : "-"}${fmtAbs(m.amount)}`}
       </span>
+      {m.type === "venta" && onToggleType && (
+        <button onClick={() => onToggleType(m.id)}
+          title={(m.ventaType === "otros") ? "Cambiar a KDP" : "Cambiar a Otros"}
+          style={{ background: (m.ventaType === "otros") ? "#f0f4ff" : "#e8f5e9", border: "none", borderRadius: 6,
+            fontSize: 11, fontWeight: 700, cursor: "pointer", padding: "3px 7px", flexShrink: 0,
+            color: (m.ventaType === "otros") ? "#5566aa" : "#1a7a4a" }}>
+          {(m.ventaType === "otros") ? "Otros" : "KDP"}
+        </button>
+      )}
       <button onClick={() => onEdit && onEdit(m)}
         style={{ background: "none", border: "none", color: "#bbb", fontSize: 15, cursor: "pointer", padding: "0 2px", flexShrink: 0 }}>✏️</button>
       <button onClick={() => onDelete(m.id)}
@@ -277,6 +286,13 @@ export default function App() {
   function setF(k, v) { setForm(f => ({...f, [k]: v})); }
 
   // ── ACTIONS
+  function toggleVentaType(id) {
+    setMovements(prev => prev.map(m => m.id === id && m.type === "venta"
+      ? { ...m, ventaType: (m.ventaType === "otros") ? "kdp" : "otros" }
+      : m
+    ));
+  }
+
   function deleteMovement(id) {
     if (!window.confirm("¿Seguro que quieres borrar este movimiento?")) return;
     setMovements(prev => prev.filter(m => m.id !== id));
@@ -625,7 +641,7 @@ export default function App() {
           {/* Últimos movimientos */}
           <h2 style={{ fontSize: 17, fontWeight: 700, margin: "0 0 10px" }}>Últimos movimientos</h2>
           {[...movements].sort((a,b) => b.date.localeCompare(a.date)).slice(0,8).map(m => (
-            <MovementRow key={m.id} m={m} onDelete={deleteMovement} onEdit={openEdit} showProduct products={products} privacyMode={privacyMode} />
+            <MovementRow key={m.id} m={m} onDelete={deleteMovement} onEdit={openEdit} onToggleType={toggleVentaType} showProduct products={products} privacyMode={privacyMode} />
           ))}
         </div>
       </>)}
@@ -736,7 +752,7 @@ export default function App() {
               <p style={{ fontSize: 36 }}>💸</p><p>Sin gastos registrados</p>
             </div>
           )}
-          {gastosList.map(m => <MovementRow key={m.id} m={m} onDelete={deleteMovement} onEdit={openEdit} products={products} privacyMode={privacyMode} />)}
+          {gastosList.map(m => <MovementRow key={m.id} m={m} onDelete={deleteMovement} onEdit={openEdit} onToggleType={toggleVentaType} products={products} privacyMode={privacyMode} />)}
         </div>
       )}
 
@@ -885,7 +901,7 @@ export default function App() {
               <p style={{ fontSize: 36 }}>💰</p><p>Sin ventas registradas</p>
             </div>
           )}
-          {ventasList.map(m => <MovementRow key={m.id} m={m} onDelete={deleteMovement} onEdit={openEdit} products={products} privacyMode={privacyMode} />)}
+          {ventasList.map(m => <MovementRow key={m.id} m={m} onDelete={deleteMovement} onEdit={openEdit} onToggleType={toggleVentaType} products={products} privacyMode={privacyMode} />)}
         </div>
       )}
 
