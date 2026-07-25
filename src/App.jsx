@@ -946,17 +946,35 @@ export default function App() {
           </div>
 
           {/* Ventas / Gastos año */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
-            {[["📈","Ventas", yearStats.ingresos, "#1a7a4a"],["📉","Gastos", yearStats.gastos, "#c0392b"]].map(([ic,lb,v,c]) => (
-              <div key={lb} style={{ background: "#fff", borderRadius: 13, padding: "13px 15px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-                <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 5 }}>
-                  <span style={{ fontSize: 14 }}>{ic}</span>
-                  <span style={{ fontSize: 12, color: "#aaa" }}>{lb}</span>
+          {(() => {
+            const mvYear = movements.filter(m => m.productId === activePid && m.date.startsWith(yearPrefix));
+            const ventasKdp = mvYear.filter(m => m.type === "venta" && (m.ventaType === "kdp" || !m.ventaType)).reduce((a,m) => a + m.amount, 0);
+            const ventasOtros = mvYear.filter(m => m.type === "venta" && m.ventaType === "otros").reduce((a,m) => a + m.amount, 0);
+            return (
+              <>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+                  <div style={{ background: "#fff", borderRadius: 13, padding: "13px 15px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                    <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 5 }}>
+                      <span style={{ fontSize: 14 }}>📈</span>
+                      <span style={{ fontSize: 12, color: "#aaa" }}>Ventas</span>
+                    </div>
+                    <p style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 700, color: "#1a7a4a", fontFamily: "'DM Mono', monospace" }}>{pAbs(privacyMode, yearStats.ingresos)}</p>
+                    <div style={{ borderTop: "1px solid #f0f0f0", paddingTop: 7 }}>
+                      <p style={{ margin: "0 0 3px", fontSize: 10, color: "#aaa" }}>📦 KDP: <span style={{ fontWeight: 700, color: "#1a7a4a" }}>{pAbs(privacyMode, ventasKdp)}</span></p>
+                      <p style={{ margin: 0, fontSize: 10, color: "#aaa" }}>💡 Otros: <span style={{ fontWeight: 700, color: "#5566aa" }}>{pAbs(privacyMode, ventasOtros)}</span></p>
+                    </div>
+                  </div>
+                  <div style={{ background: "#fff", borderRadius: 13, padding: "13px 15px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                    <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 5 }}>
+                      <span style={{ fontSize: 14 }}>📉</span>
+                      <span style={{ fontSize: 12, color: "#aaa" }}>Gastos</span>
+                    </div>
+                    <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#c0392b", fontFamily: "'DM Mono', monospace" }}>{pAbs(privacyMode, yearStats.gastos)}</p>
+                  </div>
                 </div>
-                <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: c, fontFamily: "'DM Mono', monospace" }}>{pAbs(privacyMode, v)}</p>
-              </div>
-            ))}
-          </div>
+              </>
+            );
+          })()}
 
           {/* Exportar informe */}
           <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
