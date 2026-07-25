@@ -417,20 +417,25 @@ export default function App() {
   const totalGastos = movements.filter(m => m.type === "gasto").reduce((a, m) => a + m.amount, 0);
   const totalVentas = movements.filter(m => m.type === "venta").reduce((a, m) => a + m.amount, 0);
 
-  // ── INFORMES: months for active product in selected year
+  // ── INFORMES: months for selected product or all
+  const informePidActive = informePid !== null ? informePid : null;
   const yearPrefix = String(informeYear);
-  const availableYears = [...new Set(movements.filter(m => m.productId === activePid).map(m => m.date.slice(0,4)))].sort().reverse();
-  const yearStats = calcStats(movements, activePid, yearPrefix);
+  const availableYears = [...new Set(movements.map(m => m.date.slice(0,4)))].sort().reverse();
+  const yearStats = informePidActive !== null
+    ? calcStats(movements, informePidActive, yearPrefix)
+    : calcStats(movements, null, yearPrefix, true);
 
-  // Meses con cualquier movimiento del producto activo en el año seleccionado
   const monthsWithData = [...new Set(
     movements
-      .filter(m => m.productId === activePid && m.date.startsWith(yearPrefix))
+      .filter(m => (informePidActive === null || m.productId === informePidActive) && m.date.startsWith(yearPrefix))
       .map(m => m.date.slice(0,7))
   )];
   const monthsInYear = Array.from({length: 12}, (_, i) => {
     const ym = `${informeYear}-${String(i+1).padStart(2,"0")}`;
-    return { ym, ...calcStats(movements, activePid, ym) };
+    const s = informePidActive !== null
+      ? calcStats(movements, informePidActive, ym)
+      : calcStats(movements, null, ym, true);
+    return { ym, ...s };
   }).filter(m => monthsWithData.includes(m.ym)).reverse();
 
   const maxBar = Math.max(...monthsInYear.map(m => Math.max(m.ingresos, m.gastos)), 1);
@@ -962,7 +967,7 @@ export default function App() {
 
           {/* Ventas / Gastos año */}
           {(() => {
-            const mvYear = movements.filter(m => (informePid === null || m.productId === informePidActive) && m.date.startsWith(yearPrefix));
+            const mvYear = movements.filter(m => (informePidActive === null || m.productId === informePidActive) && m.date.startsWith(yearPrefix));
             const ventasKdp = mvYear.filter(m => m.type === "venta" && (m.ventaType === "kdp" || !m.ventaType)).reduce((a,m) => a + m.amount, 0);
             const ventasOtros = mvYear.filter(m => m.type === "venta" && m.ventaType === "otros").reduce((a,m) => a + m.amount, 0);
             return (
@@ -993,7 +998,7 @@ export default function App() {
 
           {/* Exportar informe */}
           <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-            <button onClick={() => exportInformesXLSX(movements, informePid === null ? null : informePidActive, `Informe anual ${informeYear}`, String(informeYear))}
+            <button onClick={() => exportInformesXLSX(movements, informePidActive, `Informe anual ${informeYear}`, String(informeYear))}
               style={{ flex: 1, background: "#1a1a1a", color: "#fff", border: "none", borderRadius: 12,
                 padding: "11px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
               📥 Excel año {informeYear}
@@ -1120,7 +1125,7 @@ export default function App() {
         const mvs = movements
           .filter(m => m.productId === activePid && m.date.startsWith(selectedMonth))
           .sort((a,b) => b.date.localeCompare(a.date));
-        const s = calcStats(movements, activePid, selectedMonth);
+        const s = informePidActive !== null ? calcStats(movements, informePidActive, selectedMonth) : calcStats(movements, null, selectedMonth, true);
         return (
           <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "flex-end", zIndex: 200 }}
             onClick={() => setSelectedMonth(null)}>
