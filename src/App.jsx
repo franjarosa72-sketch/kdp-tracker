@@ -1207,6 +1207,7 @@ export default function App() {
               date: form.date || now.toISOString().slice(0,10),
               devengoMonth: form.devengoMonth || null,
               notes: form.notes || null,
+              ventaType: form.ventaType || "kdp",
             }]);
             setModal(null); setForm({});
           }} style={{ width: "100%", background: "#1a7a4a", color: "#fff", border: "none", borderRadius: 14,
