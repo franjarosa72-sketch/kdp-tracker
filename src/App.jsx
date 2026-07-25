@@ -210,13 +210,20 @@ function MovementRow({ m, onDelete, onEdit, onToggleType, showProduct, products,
         {privacyMode ? "•••• €" : `${m.type === "venta" ? "+" : "-"}${fmtAbs(m.amount)}`}
       </span>
       {m.type === "venta" && onToggleType && (
-        <button onClick={() => onToggleType(m.id)}
-          title={(m.ventaType === "otros") ? "Cambiar a KDP" : "Cambiar a Otros"}
-          style={{ background: (m.ventaType === "otros") ? "#f0f4ff" : "#e8f5e9", border: "none", borderRadius: 6,
-            fontSize: 11, fontWeight: 700, cursor: "pointer", padding: "3px 7px", flexShrink: 0,
-            color: (m.ventaType === "otros") ? "#5566aa" : "#1a7a4a" }}>
-          {(m.ventaType === "otros") ? "Otros" : "KDP"}
-        </button>
+        <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+          <button onClick={() => onToggleType(m.id)}
+            style={{ background: (!m.ventaType || m.ventaType === "kdp") ? "#1a7a4a" : "#f0f0f0",
+              color: (!m.ventaType || m.ventaType === "kdp") ? "#fff" : "#aaa",
+              border: "none", borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", padding: "3px 7px" }}>
+            KDP
+          </button>
+          <button onClick={() => onToggleType(m.id)}
+            style={{ background: m.ventaType === "otros" ? "#5566aa" : "#f0f0f0",
+              color: m.ventaType === "otros" ? "#fff" : "#aaa",
+              border: "none", borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", padding: "3px 7px" }}>
+            Otros
+          </button>
+        </div>
       )}
       <button onClick={() => onEdit && onEdit(m)}
         style={{ background: "none", border: "none", color: "#bbb", fontSize: 15, cursor: "pointer", padding: "0 2px", flexShrink: 0 }}>✏️</button>
