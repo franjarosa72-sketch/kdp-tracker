@@ -209,27 +209,27 @@ function MovementRow({ m, onDelete, onEdit, onToggleType, showProduct, products,
         color: m.type === "venta" ? "#1a7a4a" : "#c0392b" }}>
         {privacyMode ? "•••• €" : `${m.type === "venta" ? "+" : "-"}${fmtAbs(m.amount)}`}
       </span>
-      {m.type === "venta" && onToggleType && (
-        <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-          <button onClick={() => onToggleType(m.id)}
-            style={{ background: (!m.ventaType || m.ventaType === "kdp") ? "#1a7a4a" : "#f0f0f0",
-              color: (!m.ventaType || m.ventaType === "kdp") ? "#fff" : "#aaa",
-              border: "none", borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", padding: "3px 7px" }}>
-            KDP
-          </button>
-          <button onClick={() => onToggleType(m.id)}
-            style={{ background: m.ventaType === "otros" ? "#5566aa" : "#f0f0f0",
-              color: m.ventaType === "otros" ? "#fff" : "#aaa",
-              border: "none", borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", padding: "3px 7px" }}>
-            Otros
-          </button>
-        </div>
-      )}
       <button onClick={() => onEdit && onEdit(m)}
         style={{ background: "none", border: "none", color: "#bbb", fontSize: 15, cursor: "pointer", padding: "0 2px", flexShrink: 0 }}>✏️</button>
       <button onClick={() => onDelete(m.id)}
         style={{ background: "none", border: "none", color: "#ddd", fontSize: 15, cursor: "pointer", padding: "0 2px", flexShrink: 0 }}>🗑</button>
     </div>
+    {m.type === "venta" && onToggleType && (
+      <div style={{ display: "flex", gap: 6, marginTop: 8, justifyContent: "flex-end" }}>
+        <button onClick={() => { if (m.ventaType !== "kdp" && m.ventaType) onToggleType(m.id); }}
+          style={{ background: (!m.ventaType || m.ventaType === "kdp") ? "#1a7a4a" : "#f0f0f0",
+            color: (!m.ventaType || m.ventaType === "kdp") ? "#fff" : "#aaa",
+            border: "none", borderRadius: 7, fontSize: 11, fontWeight: 700, cursor: "pointer", padding: "5px 12px" }}>
+          📦 KDP
+        </button>
+        <button onClick={() => { if (m.ventaType !== "otros") onToggleType(m.id); }}
+          style={{ background: m.ventaType === "otros" ? "#5566aa" : "#f0f0f0",
+            color: m.ventaType === "otros" ? "#fff" : "#aaa",
+            border: "none", borderRadius: 7, fontSize: 11, fontWeight: 700, cursor: "pointer", padding: "5px 12px" }}>
+          💡 Otros
+        </button>
+      </div>
+    )}
   );
 }
 
