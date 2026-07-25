@@ -179,57 +179,55 @@ function MovementRow({ m, onDelete, onEdit, onToggleType, showProduct, products,
   const prod = products.find(p => p.id === m.productId);
   return (
     <div style={{ background: "#fff", borderRadius: 14, padding: "13px 16px", marginBottom: 8,
-      boxShadow: "0 1px 4px rgba(0,0,0,0.05)", display: "flex", alignItems: "center", gap: 12 }}>
-      <div style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0,
-        background: m.type === "venta" ? "#e8f5e9" : "#fdecea",
-        display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17 }}>
-        {m.type === "venta" ? "📈" : "📉"}
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1a1a1a",
-          whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.concept}</p>
-        <p style={{ margin: "2px 0 0", fontSize: 11, color: "#aaa" }}>
-          {m.date}
-          {m.devengoMonth && <span style={{ marginLeft: 5, background: "#fff8e1", color: "#b8860b", borderRadius: 4, padding: "1px 5px", fontWeight: 600 }}>📅 {m.devengoMonth}</span>}
-        </p>
-        {prod && (
-          <p style={{ margin: "2px 0 0", fontSize: 10, color: "#bbb", display: "flex", alignItems: "center", gap: 4 }}>
-            <span>{prod.emoji}</span>
-            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{prod.name}</span>
-            {m.type === "venta" && m.ventaType === "otros" && (
-              <span style={{ marginLeft: 4, background: "#f0f4ff", color: "#5566aa", borderRadius: 4, padding: "1px 5px", fontWeight: 600, fontSize: 9, flexShrink: 0 }}>Otros</span>
-            )}
-            {m.type === "venta" && (m.ventaType === "kdp" || !m.ventaType) && (
-              <span style={{ marginLeft: 4, background: "#e8f5e9", color: "#1a7a4a", borderRadius: 4, padding: "1px 5px", fontWeight: 600, fontSize: 9, flexShrink: 0 }}>KDP</span>
-            )}
+      boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+      {/* Fila principal */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0,
+          background: m.type === "venta" ? "#e8f5e9" : "#fdecea",
+          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17 }}>
+          {m.type === "venta" ? "📈" : "📉"}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1a1a1a",
+            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.concept}</p>
+          <p style={{ margin: "2px 0 0", fontSize: 11, color: "#aaa", whiteSpace: "nowrap" }}>
+            {m.date}
+            {m.devengoMonth && <span style={{ marginLeft: 5, background: "#fff8e1", color: "#b8860b", borderRadius: 4, padding: "1px 5px", fontWeight: 600 }}>📅 {m.devengoMonth}</span>}
           </p>
-        )}
+          {prod && (
+            <p style={{ margin: "2px 0 0", fontSize: 10, color: "#bbb", display: "flex", alignItems: "center", gap: 4 }}>
+              <span>{prod.emoji}</span>
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{prod.name}</span>
+            </p>
+          )}
+        </div>
+        <span style={{ fontSize: 14, fontWeight: 700, fontFamily: "'DM Mono', monospace", whiteSpace: "nowrap", flexShrink: 0,
+          color: m.type === "venta" ? "#1a7a4a" : "#c0392b" }}>
+          {privacyMode ? "•••• €" : `${m.type === "venta" ? "+" : "-"}${fmtAbs(m.amount)}`}
+        </span>
+        <button onClick={() => onEdit && onEdit(m)}
+          style={{ background: "none", border: "none", color: "#bbb", fontSize: 15, cursor: "pointer", padding: "0 2px", flexShrink: 0 }}>✏️</button>
+        <button onClick={() => onDelete(m.id)}
+          style={{ background: "none", border: "none", color: "#ddd", fontSize: 15, cursor: "pointer", padding: "0 2px", flexShrink: 0 }}>🗑</button>
       </div>
-      <span style={{ fontSize: 14, fontWeight: 700, fontFamily: "'DM Mono', monospace", whiteSpace: "nowrap",
-        color: m.type === "venta" ? "#1a7a4a" : "#c0392b" }}>
-        {privacyMode ? "•••• €" : `${m.type === "venta" ? "+" : "-"}${fmtAbs(m.amount)}`}
-      </span>
-      <button onClick={() => onEdit && onEdit(m)}
-        style={{ background: "none", border: "none", color: "#bbb", fontSize: 15, cursor: "pointer", padding: "0 2px", flexShrink: 0 }}>✏️</button>
-      <button onClick={() => onDelete(m.id)}
-        style={{ background: "none", border: "none", color: "#ddd", fontSize: 15, cursor: "pointer", padding: "0 2px", flexShrink: 0 }}>🗑</button>
+      {/* Segunda fila: botones KDP/Otros solo en ventas */}
+      {m.type === "venta" && onToggleType && (
+        <div style={{ display: "flex", gap: 6, marginTop: 8, justifyContent: "flex-end" }}>
+          <button onClick={() => { if (m.ventaType === "otros") onToggleType(m.id); }}
+            style={{ background: (!m.ventaType || m.ventaType === "kdp") ? "#1a7a4a" : "#f0f0f0",
+              color: (!m.ventaType || m.ventaType === "kdp") ? "#fff" : "#aaa",
+              border: "none", borderRadius: 7, fontSize: 11, fontWeight: 700, cursor: "pointer", padding: "5px 12px" }}>
+            📦 KDP
+          </button>
+          <button onClick={() => { if (m.ventaType !== "otros") onToggleType(m.id); }}
+            style={{ background: m.ventaType === "otros" ? "#5566aa" : "#f0f0f0",
+              color: m.ventaType === "otros" ? "#fff" : "#aaa",
+              border: "none", borderRadius: 7, fontSize: 11, fontWeight: 700, cursor: "pointer", padding: "5px 12px" }}>
+            💡 Otros
+          </button>
+        </div>
+      )}
     </div>
-    {m.type === "venta" && onToggleType && (
-      <div style={{ display: "flex", gap: 6, marginTop: 8, justifyContent: "flex-end" }}>
-        <button onClick={() => { if (m.ventaType !== "kdp" && m.ventaType) onToggleType(m.id); }}
-          style={{ background: (!m.ventaType || m.ventaType === "kdp") ? "#1a7a4a" : "#f0f0f0",
-            color: (!m.ventaType || m.ventaType === "kdp") ? "#fff" : "#aaa",
-            border: "none", borderRadius: 7, fontSize: 11, fontWeight: 700, cursor: "pointer", padding: "5px 12px" }}>
-          📦 KDP
-        </button>
-        <button onClick={() => { if (m.ventaType !== "otros") onToggleType(m.id); }}
-          style={{ background: m.ventaType === "otros" ? "#5566aa" : "#f0f0f0",
-            color: m.ventaType === "otros" ? "#fff" : "#aaa",
-            border: "none", borderRadius: 7, fontSize: 11, fontWeight: 700, cursor: "pointer", padding: "5px 12px" }}>
-          💡 Otros
-        </button>
-      </div>
-    )}
   );
 }
 
