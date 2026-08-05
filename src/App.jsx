@@ -1240,11 +1240,36 @@ export default function App() {
           };
 
           if (expType === "todo") {
-            // Two sheets: Ventas + Gastos
             const ventas = data.filter(m => m.type === "venta");
             const gastos = data.filter(m => m.type === "gasto");
+            const totalV = ventas.reduce((a,m) => a + m.amount, 0);
+            const totalG = gastos.reduce((a,m) => a + m.amount, 0);
+            const resultado2 = totalV - totalG;
+            const roi2 = totalG > 0 ? ((resultado2 / totalG) * 100) : (totalV > 0 ? 100 : 0);
+
             XLSX.utils.book_append_sheet(wb, makeSheet(ventas, `Ventas · ${bookLabel} · ${monthLabel}`), "Ventas");
             XLSX.utils.book_append_sheet(wb, makeSheet(gastos, `Gastos · ${bookLabel} · ${monthLabel}`), "Gastos");
+
+            // Resultado sheet
+            const resData = [
+              [`Resultado · ${bookLabel} · ${monthLabel}`],
+              [],
+              ["Concepto", "Importe (€)"],
+              ["Total Ventas", parseFloat(totalV.toFixed(2))],
+              ["Total Gastos", parseFloat(totalG.toFixed(2))],
+              [],
+              ["Resultado (Ventas - Gastos)", parseFloat(resultado2.toFixed(2))],
+              ["ROI", `${roi2.toFixed(0)}%`],
+            ];
+            const wsRes = XLSX.utils.aoa_to_sheet(resData);
+            wsRes["!merges"] = [{ s:{r:0,c:0}, e:{r:0,c:1} }];
+            if (wsRes["A1"]) wsRes["A1"].s = { font: { bold: true, sz: 14 }, alignment: { horizontal: "center" } };
+            if (wsRes["A3"]) wsRes["A3"].s = { font: { bold: true } };
+            if (wsRes["B3"]) wsRes["B3"].s = { font: { bold: true } };
+            if (wsRes["A7"]) wsRes["A7"].s = { font: { bold: true } };
+            if (wsRes["B7"]) wsRes["B7"].s = { font: { bold: true, color: { rgb: resultado2 >= 0 ? "1a7a4a" : "c0392b" } } };
+            wsRes["!cols"] = [{wch: 35}, {wch: 16}];
+            XLSX.utils.book_append_sheet(wb, wsRes, "Resultado");
           } else if (expType === "ventas") {
             const ventas = data.filter(m => m.type === "venta");
             XLSX.utils.book_append_sheet(wb, makeSheet(ventas, `Ventas · ${bookLabel} · ${monthLabel}`), "Ventas");
