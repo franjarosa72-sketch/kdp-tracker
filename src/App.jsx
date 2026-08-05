@@ -60,9 +60,14 @@ async function exportToXLSX(data, filename, periodo) {
   const total = parseFloat(data.reduce((a,m) => a + m.amount, 0).toFixed(2));
   const titleRow = [periodo];
   const totalHeaderRow = [`Total: ${total.toFixed(2).replace(".", ",")} €`];
-  const headers = ["Fecha", "Concepto", "Importe (€)", "Mes devengo", "Notas"];
+  let allProdsLocal = [];
+  try { allProdsLocal = JSON.parse(localStorage.getItem("kdp-products") || "[]"); } catch {}
+  const getBookName = (pid) => { const p = allProdsLocal.find(p => p.id === pid); return p ? p.name : ""; };
+
+  const headers = ["Fecha", "Libro", "Concepto", "Importe (€)", "Mes devengo", "Notas"];
   const rows = data.map(m => [
     m.date,
+    getBookName(m.productId),
     m.concept,
     parseFloat(m.amount.toFixed(2)),
     m.devengoMonth || "",
@@ -73,7 +78,7 @@ async function exportToXLSX(data, filename, periodo) {
   const ws = XLSX.utils.aoa_to_sheet(wsData);
 
   // Style title: merge cells and bold
-  ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 4 } }, { s: { r: 1, c: 0 }, e: { r: 1, c: 4 } }];
+  ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }, { s: { r: 1, c: 0 }, e: { r: 1, c: 5 } }];
   if (ws["A1"]) {
     ws["A1"].s = {
       font: { bold: true, sz: 16 },
@@ -93,7 +98,7 @@ async function exportToXLSX(data, filename, periodo) {
   });
 
   // Column widths
-  ws["!cols"] = [{ wch: 14 }, { wch: 35 }, { wch: 14 }, { wch: 14 }, { wch: 30 }];
+  ws["!cols"] = [{ wch: 14 }, { wch: 35 }, { wch: 35 }, { wch: 14 }, { wch: 14 }, { wch: 30 }];
 
   XLSX.utils.book_append_sheet(wb, ws, "Datos");
   XLSX.writeFile(wb, filename);
@@ -119,14 +124,20 @@ async function exportInformesXLSX(movements, activePid, periodo, prefix) {
   const resultado = totalVentas - totalGastos;
   const roi = totalGastos > 0 ? ((resultado / totalGastos) * 100) : (totalVentas > 0 ? 100 : 0);
 
+  // Get products for book name lookup
+  let allProds = [];
+  try { allProds = JSON.parse(localStorage.getItem("kdp-products") || "[]"); } catch {}
+  const getBook = (pid) => { const p = allProds.find(p => p.id === pid); return p ? p.name : ""; };
+
   const rows = [
     [periodo],
     [`Ventas: ${totalVentas.toFixed(2).replace(".",",")} €  |  Gastos: ${totalGastos.toFixed(2).replace(".",",")} €  |  Resultado: ${resultado.toFixed(2).replace(".",",")} €  |  ROI: ${roi.toFixed(0)}%`],
     [],
-    ["Fecha", "Tipo", "Concepto", "Importe (€)", "Mes devengo", "Notas"],
+    ["Fecha", "Tipo", "Libro", "Concepto", "Importe (€)", "Mes devengo", "Notas"],
     ...mvs.sort((a,b) => b.date.localeCompare(a.date)).map(m => [
       m.date,
       m.type === "venta" ? "Venta" : "Gasto",
+      getBook(m.productId),
       m.concept,
       parseFloat(m.amount.toFixed(2)),
       m.devengoMonth || "",
@@ -136,16 +147,16 @@ async function exportInformesXLSX(movements, activePid, periodo, prefix) {
 
   const ws = XLSX.utils.aoa_to_sheet(rows);
   ws["!merges"] = [
-    { s: { r: 0, c: 0 }, e: { r: 0, c: 5 } },
-    { s: { r: 1, c: 0 }, e: { r: 1, c: 5 } },
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 6 } },
+    { s: { r: 1, c: 0 }, e: { r: 1, c: 6 } },
   ];
   if (ws["A1"]) ws["A1"].s = { font: { bold: true, sz: 16 }, alignment: { horizontal: "center" } };
   if (ws["A2"]) ws["A2"].s = { font: { bold: true, sz: 12 }, alignment: { horizontal: "center" } };
-  [0,1,2,3,4,5].forEach(i => {
+  [0,1,2,3,4,5,6].forEach(i => {
     const ref = XLSX.utils.encode_cell({ r: 3, c: i });
     if (ws[ref]) ws[ref].s = { font: { bold: true } };
   });
-  ws["!cols"] = [{ wch: 14 }, { wch: 8 }, { wch: 35 }, { wch: 14 }, { wch: 14 }, { wch: 30 }];
+  ws["!cols"] = [{ wch: 14 }, { wch: 8 }, { wch: 35 }, { wch: 35 }, { wch: 14 }, { wch: 14 }, { wch: 30 }];
 
   XLSX.utils.book_append_sheet(wb, ws, "Informe");
   XLSX.writeFile(wb, `informe-kdp-${prefix}.xlsx`);
@@ -284,6 +295,10 @@ export default function App() {
   const [privacyMode, setPrivacyMode] = useState(false);
   const [globalPeriod, setGlobalPeriod] = useState("mes");
   const [informePid, setInformePid] = useState(null); // null = todos
+  const [exportModal, setExportModal] = useState(null);
+  const [expType, setExpType] = useState("todo");
+  const [expBook, setExpBook] = useState("todos");
+  const [expMonth, setExpMonth] = useState("");
   const [filterType, setFilterType] = useState("all"); // gastos/ventas filter
   const [informeYear, setInformeYear] = useState(new Date().getFullYear());
 
@@ -739,7 +754,7 @@ export default function App() {
               <p style={{ margin: "3px 0 0", fontSize: 13, color: "#999" }}>Total: {fmtAbs(gastosList.reduce((a,m) => a + m.amount, 0))}</p>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => exportToXLSX(gastosList, "gastos-kdp.xlsx", filterMonth ? `Gastos · ${MONTHS_ES[parseInt(filterMonth.split("-")[1])-1]} ${filterMonth.split("-")[0]}` : `Gastos · Histórico completo ${new Date().getFullYear()}`)}
+              <button onClick={() => setExportModal("gastos")}
                 style={{ background: "#f0f0f0", color: "#555", border: "none", borderRadius: 22,
                   padding: "10px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>📥 Excel</button>
               <button onClick={() => { setModal("gasto"); setForm({ date: now.toISOString().slice(0,10) }); }}
@@ -778,7 +793,7 @@ export default function App() {
               <p style={{ margin: "3px 0 0", fontSize: 13, color: "#999" }}>Total: {fmtAbs(ventasList.reduce((a,m) => a + m.amount, 0))}</p>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => exportToXLSX(ventasList, "ventas-kdp.xlsx", filterMonth ? `Ventas · ${MONTHS_ES[parseInt(filterMonth.split("-")[1])-1]} ${filterMonth.split("-")[0]}` : `Ventas · Histórico completo ${new Date().getFullYear()}`)}
+              <button onClick={() => setExportModal("ventas")}
                 style={{ background: "#f0f0f0", color: "#555", border: "none", borderRadius: 22,
                   padding: "10px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>📥 Excel</button>
               <button onClick={() => { setModal("venta"); setForm({ date: now.toISOString().slice(0,10), concept: activeProduct?.name }); }}
@@ -998,10 +1013,10 @@ export default function App() {
 
           {/* Exportar informe */}
           <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-            <button onClick={() => exportInformesXLSX(movements, informePidActive, `Informe anual ${informeYear}`, String(informeYear))}
+            <button onClick={() => setExportModal("informes")}
               style={{ flex: 1, background: "#1a1a1a", color: "#fff", border: "none", borderRadius: 12,
                 padding: "11px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-              📥 Excel año {informeYear}
+              📥 Excel
             </button>
           </div>
 
@@ -1178,7 +1193,75 @@ export default function App() {
         );
       })()}
 
-      {/* ── BOTTOM NAV ── */}}
+      {/* ── MODAL EXPORTAR EXCEL ── */}
+      {exportModal && (() => {
+        const doExport = async () => {
+          let data = [...movements].sort((a,b) => b.date.localeCompare(a.date));
+          // Filter by type
+          if (expType === "ventas") data = data.filter(m => m.type === "venta");
+          else if (expType === "gastos") data = data.filter(m => m.type === "gasto");
+          else if (expType === "kdp") data = data.filter(m => m.type === "venta" && (m.ventaType === "kdp" || !m.ventaType));
+          else if (expType === "otros") data = data.filter(m => m.type === "venta" && m.ventaType === "otros");
+          // Filter by book
+          if (expBook !== "todos") data = data.filter(m => m.productId === Number(expBook));
+          // Filter by month
+          if (expMonth) data = data.filter(m => m.date.startsWith(expMonth));
+
+          const bookLabel = expBook === "todos" ? "Todos los libros" : (products.find(p => p.id === Number(expBook))?.name || "");
+          const typeLabel = expType === "todo" ? "Todo" : expType === "ventas" ? "Ventas" : expType === "gastos" ? "Gastos" : expType === "kdp" ? "Ventas KDP" : "Ventas Otros";
+          const monthLabel = expMonth ? `${MONTHS_ES[parseInt(expMonth.split("-")[1])-1]} ${expMonth.split("-")[0]}` : "Histórico completo";
+          const titulo = `${typeLabel} · ${bookLabel} · ${monthLabel}`;
+
+          await exportToXLSX(data, "kdp-export.xlsx", titulo);
+          setExportModal(null);
+        };
+
+        return (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex",
+            alignItems: "flex-end", zIndex: 200 }} onClick={() => setExportModal(null)}>
+            <div style={{ background: "#fff", borderRadius: "22px 22px 0 0", padding: "24px 20px 44px",
+              width: "100%", maxWidth: 420, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>📥 Exportar Excel</h3>
+                <button onClick={() => setExportModal(null)} style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer", color: "#aaa" }}>✕</button>
+              </div>
+
+              <label style={{ fontSize: 11, color: "#aaa", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, display: "block", marginBottom: 5 }}>Tipo</label>
+              <select value={expType} onChange={e => setExpType(e.target.value)}
+                style={{ width: "100%", border: "1.5px solid #e8e8e8", borderRadius: 11, padding: "10px 13px", fontSize: 14, outline: "none", background: "#fafafa", fontFamily: "inherit", marginBottom: 14 }}>
+                <option value="todo">Todo (ventas + gastos)</option>
+                <option value="ventas">Solo ventas</option>
+                <option value="kdp">Solo ventas KDP</option>
+                <option value="otros">Solo ventas Otros</option>
+                <option value="gastos">Solo gastos</option>
+              </select>
+
+              <label style={{ fontSize: 11, color: "#aaa", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, display: "block", marginBottom: 5 }}>Libro</label>
+              <select value={expBook} onChange={e => setExpBook(e.target.value)}
+                style={{ width: "100%", border: "1.5px solid #e8e8e8", borderRadius: 11, padding: "10px 13px", fontSize: 14, outline: "none", background: "#fafafa", fontFamily: "inherit", marginBottom: 14 }}>
+                <option value="todos">📚 Todos los libros</option>
+                {products.map(p => <option key={p.id} value={String(p.id)}>{p.emoji} {p.name}</option>)}
+              </select>
+
+              <label style={{ fontSize: 11, color: "#aaa", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, display: "block", marginBottom: 5 }}>Mes (opcional)</label>
+              <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+                <input type="month" value={expMonth} onChange={e => setExpMonth(e.target.value)}
+                  style={{ flex: 1, border: "1.5px solid #e8e8e8", borderRadius: 11, padding: "10px 13px", fontSize: 14, outline: "none", background: "#fafafa", fontFamily: "inherit" }} />
+                {expMonth && <button onClick={() => setExpMonth("")}
+                  style={{ background: "#f0f0f0", border: "none", borderRadius: 11, padding: "10px 14px", fontSize: 13, cursor: "pointer" }}>✕</button>}
+              </div>
+
+              <button onClick={doExport}
+                style={{ width: "100%", background: "#1a1a1a", color: "#fff", border: "none", borderRadius: 14,
+                  padding: "16px", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
+                📥 Descargar Excel
+              </button>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── BOTTOM NAV ── */}}}
       <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%",
         maxWidth: 420, background: "#fff", borderTop: "1px solid #f0f0f0", display: "flex",
         boxShadow: "0 -2px 12px rgba(0,0,0,0.06)", zIndex: 100 }}>
