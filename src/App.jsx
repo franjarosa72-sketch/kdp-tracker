@@ -1196,23 +1196,70 @@ export default function App() {
       {/* ── MODAL EXPORTAR EXCEL ── */}
       {exportModal && (() => {
         const doExport = async () => {
+          if (!window.XLSX) {
+            await new Promise((resolve, reject) => {
+              const s = document.createElement("script");
+              s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+              s.onload = resolve; s.onerror = reject;
+              document.head.appendChild(s);
+            });
+          }
+          const XLSX = window.XLSX;
+
+          let allProdsLocal = [];
+          try { allProdsLocal = JSON.parse(localStorage.getItem("kdp-products") || "[]"); } catch {}
+          const getBookName = (pid) => { const p = allProdsLocal.find(p => p.id === pid); return p ? p.name : ""; };
+
           let data = [...movements].sort((a,b) => b.date.localeCompare(a.date));
-          // Filter by type
-          if (expType === "ventas") data = data.filter(m => m.type === "venta");
-          else if (expType === "gastos") data = data.filter(m => m.type === "gasto");
-          else if (expType === "kdp") data = data.filter(m => m.type === "venta" && (m.ventaType === "kdp" || !m.ventaType));
-          else if (expType === "otros") data = data.filter(m => m.type === "venta" && m.ventaType === "otros");
-          // Filter by book
           if (expBook !== "todos") data = data.filter(m => m.productId === Number(expBook));
-          // Filter by month
           if (expMonth) data = data.filter(m => m.date.startsWith(expMonth));
 
           const bookLabel = expBook === "todos" ? "Todos los libros" : (products.find(p => p.id === Number(expBook))?.name || "");
-          const typeLabel = expType === "todo" ? "Todo" : expType === "ventas" ? "Ventas" : expType === "gastos" ? "Gastos" : expType === "kdp" ? "Ventas KDP" : "Ventas Otros";
           const monthLabel = expMonth ? `${MONTHS_ES[parseInt(expMonth.split("-")[1])-1]} ${expMonth.split("-")[0]}` : "Histórico completo";
-          const titulo = `${typeLabel} · ${bookLabel} · ${monthLabel}`;
 
-          await exportToXLSX(data, "kdp-export.xlsx", titulo);
+          const wb = XLSX.utils.book_new();
+
+          const makeSheet = (rows, titulo) => {
+            const totalVentas = rows.filter(m => m.type === "venta").reduce((a,m) => a + m.amount, 0);
+            const totalGastos = rows.filter(m => m.type === "gasto").reduce((a,m) => a + m.amount, 0);
+            const resultado = totalVentas - totalGastos;
+            const wsData = [
+              [titulo],
+              [`Ventas: ${totalVentas.toFixed(2).replace(".",",")} €  |  Gastos: ${totalGastos.toFixed(2).replace(".",",")} €  |  Resultado: ${resultado.toFixed(2).replace(".",",")} €`],
+              [],
+              ["Fecha", "Tipo", "Libro", "Concepto", "Importe (€)", "Mes devengo", "Notas"],
+              ...rows.map(m => [m.date, m.type === "venta" ? "Venta" : "Gasto", getBookName(m.productId), m.concept, parseFloat(m.amount.toFixed(2)), m.devengoMonth || "", m.notes || ""])
+            ];
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            ws["!merges"] = [{ s:{r:0,c:0}, e:{r:0,c:6} }, { s:{r:1,c:0}, e:{r:1,c:6} }];
+            if (ws["A1"]) ws["A1"].s = { font: { bold: true, sz: 14 }, alignment: { horizontal: "center" } };
+            if (ws["A2"]) ws["A2"].s = { font: { bold: true, sz: 11 }, alignment: { horizontal: "center" } };
+            [0,1,2,3,4,5,6].forEach(i => { const r = XLSX.utils.encode_cell({r:3,c:i}); if (ws[r]) ws[r].s = { font: { bold: true } }; });
+            ws["!cols"] = [{wch:14},{wch:8},{wch:30},{wch:35},{wch:14},{wch:14},{wch:20}];
+            return ws;
+          };
+
+          if (expType === "todo") {
+            // Two sheets: Ventas + Gastos
+            const ventas = data.filter(m => m.type === "venta");
+            const gastos = data.filter(m => m.type === "gasto");
+            XLSX.utils.book_append_sheet(wb, makeSheet(ventas, `Ventas · ${bookLabel} · ${monthLabel}`), "Ventas");
+            XLSX.utils.book_append_sheet(wb, makeSheet(gastos, `Gastos · ${bookLabel} · ${monthLabel}`), "Gastos");
+          } else if (expType === "ventas") {
+            const ventas = data.filter(m => m.type === "venta");
+            XLSX.utils.book_append_sheet(wb, makeSheet(ventas, `Ventas · ${bookLabel} · ${monthLabel}`), "Ventas");
+          } else if (expType === "kdp") {
+            const ventas = data.filter(m => m.type === "venta" && (m.ventaType === "kdp" || !m.ventaType));
+            XLSX.utils.book_append_sheet(wb, makeSheet(ventas, `Ventas KDP · ${bookLabel} · ${monthLabel}`), "Ventas KDP");
+          } else if (expType === "otros") {
+            const ventas = data.filter(m => m.type === "venta" && m.ventaType === "otros");
+            XLSX.utils.book_append_sheet(wb, makeSheet(ventas, `Ventas Otros · ${bookLabel} · ${monthLabel}`), "Ventas Otros");
+          } else if (expType === "gastos") {
+            const gastos = data.filter(m => m.type === "gasto");
+            XLSX.utils.book_append_sheet(wb, makeSheet(gastos, `Gastos · ${bookLabel} · ${monthLabel}`), "Gastos");
+          }
+
+          XLSX.writeFile(wb, "kdp-export.xlsx");
           setExportModal(null);
         };
 
